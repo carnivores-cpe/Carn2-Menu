@@ -9,7 +9,7 @@
 #define _MAIN_
 #include "Hunt.h"
 
-#include "resource.h"
+#include "resource.h" // For IDI_ICON1
 
 #include <iostream>
 #include <iomanip>
@@ -41,8 +41,8 @@ void CloseLogs()
 {
 #ifdef _DEBUG
 	std::cout.rdbuf(g_COutBuf);
-#endif
 	g_LogFile.close();
+#endif //_DEBUG
 }
 
 
@@ -127,7 +127,7 @@ bool CreateMainWindow()
 	hwndMain = CreateWindowEx(0,
 		wc.lpszClassName,
 		"Carnivores 2",
-		WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,// |  WS_POPUP,
+		WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,// |  WS_POPUP,
 		0, 0, 800, 600,
 		NULL, NULL, (HINSTANCE)hInst, NULL
 	);
@@ -143,26 +143,24 @@ bool CreateMainWindow()
 
 	std::cout << "Main Window Creation: Ok!" << std::endl;
 
-	// I assume this jargon is meant to fix the client area? gosh...
-	RECT rcClient, rcWindow;
-	int ptDiffx, ptDiffy;
-	GetClientRect(hwndMain, &rcClient);
-	GetWindowRect(hwndMain, &rcWindow);
-	ptDiffx = (rcWindow.right - rcWindow.left) - rcClient.right;
-	ptDiffy = (rcWindow.bottom - rcWindow.top) - rcClient.bottom;
-	MoveWindow(hwndMain, rcWindow.left, rcWindow.top, 800 + ptDiffx, 600 + ptDiffy, TRUE);
+	// Resize the window so the client (drawing) area is 800x600, and reposition it to the center of the primary screen
+	int WX = (GetSystemMetrics(SM_CXSCREEN) / 2) - 400;
+	int WY = (GetSystemMetrics(SM_CYSCREEN) / 2) - 300;
+	RECT rc = { WX, WY, WX + 800, WY + 600 };
+	AdjustWindowRect(&rc, GetWindowLong(hwndMain, GWL_STYLE), false);
+	SetWindowPos(hwndMain, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
+	UpdateWindow(hwndMain);
 
 	return true;
 }
 
 
-#ifndef _DEBUG
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow)
+#ifdef _DEBUG
+int main(int argc, char* argv[]) {
 #else
-int main(int argc, char* argv[])
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow) {
 #endif
-{
-	MSG msg;
+	MSG msg = MSG();
 
 	try {
 		// Create Log Files
@@ -172,11 +170,6 @@ int main(int argc, char* argv[])
 		CreateMainWindow();
 		InitNetwork();
 		InitInterface();
-
-		// (test)Send a HTTP GET message
-		//NetworkGet( "/", "www.whatsmyip.org", "" );
-
-		//NetworkGet( "/carnivores/servers.php?ip=124.181.149.112&name=Carnivores_Server", "www.epiczen.net", "null" );
 
 		LoadResourcesScript();
 
