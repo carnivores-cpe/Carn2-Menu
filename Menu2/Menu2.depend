@@ -45,3 +45,61 @@
 	<string>
 	<cstdint>
 
+1588343300 source:d:\programming\carn2 menu\menu2\audio.cpp
+	<windows.h>
+	<iostream>
+	<fstream>
+	<string>
+	<vector>
+
+1364423462 source:d:\programming\carn2 menu\menu2\characters.cpp
+	"Hunt.h"
+
+1588379663 d:\programming\carn2 menu\menu2\hunt.h
+	<Windows.h>
+	<fstream>
+	<string>
+	<vector>
+	<cstdint>
+	<cstdio>
+
+1588383650 source:d:\programming\carn2 menu\menu2\hunt2.cpp
+	"Hunt.h"
+	"resource.h"
+	<iostream>
+	<iomanip>
+	<fstream>
+	<sstream>
+	<thread>
+	<chrono>
+
+1588382199 d:\programming\carn2 menu\menu2\resource.h
+
+1588384595 source:d:\programming\carn2 menu\menu2\menu.cpp
+	"Hunt.h"
+	<cmath>
+	<iostream>
+	<iomanip>
+	<sstream>
+	<string>
+
+1588387065 source:d:\programming\carn2 menu\menu2\menu2.rc
+	"resource.h"
+	"winres.h"
+	"resource.h"
+
+1588383752 source:d:\programming\carn2 menu\menu2\netcode.cpp
+	"Hunt.h"
+	<WinSock2.h>
+	<ws2tcpip.h>
+	<iostream>
+
+1588382161 source:d:\programming\carn2 menu\menu2\resources.cpp
+	"Hunt.h"
+	<cstdlib>
+	<iostream>
+	<iomanip>
+	<sstream>
+	<fstream>
+	<string>
+

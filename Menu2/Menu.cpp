@@ -439,7 +439,7 @@ int LaunchProcess(std::string exe_name)
 
 void ProcessMenu()
 {
-	uint8_t id;
+	uint8_t id = 0;
 	POINT p;
 	GetCursorPos(&p);
 	ScreenToClient(hwndMain, &p);
@@ -567,7 +567,7 @@ void ProcessMenu()
 		}*/
 
 		InterfaceSetFont(fnt_Small);
-		int  ttm = (int)g_UserProfile.Total.time;
+		//int  ttm = (int)g_UserProfile.Total.time;
 		int  ltm = (int)g_UserProfile.Last.time;
 
 		DrawTextShadow(718 - GetTextW(hdcCMain, "Path travelled  "), 78, "Path travelled  ", c);

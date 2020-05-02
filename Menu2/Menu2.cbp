@@ -57,15 +57,17 @@
 		</Linker>
 		<Unit filename="Audio.cpp" />
 		<Unit filename="Characters.cpp" />
-		<Unit filename="Game.cpp" />
 		<Unit filename="Hunt.h" />
 		<Unit filename="Hunt2.cpp" />
 		<Unit filename="Menu.cpp" />
-		<Unit filename="NetCode.cpp" />
-		<Unit filename="Resource.rc">
+		<Unit filename="Menu2.rc">
 			<Option compilerVar="WINDRES" />
+			<Option compiler="gcc" use="0" buildCommand="$rescomp $res_options -D__MINGW__=1 -i $file -o $(TARGET_OBJECT_DIR)Menu2.res" />
 		</Unit>
+		<Unit filename="NetCode.cpp" />
 		<Unit filename="Resources.cpp" />
+		<Unit filename="action.ico" />
+		<Unit filename="resource.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />
