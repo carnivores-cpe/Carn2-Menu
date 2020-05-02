@@ -21,6 +21,7 @@
 #undef WIN32_LEAN_AND_MEAN
 
 #include <iostream>
+#include <sstream>
 
 
 int iResult = 0;
@@ -51,25 +52,23 @@ void ShutdownNetwork()
 
 void NetworkPost(LPSTR url, LPSTR host, LPSTR data)
 {
-	char			Buffer[1024];
+	std::stringstream packet;
 	sockaddr_in		SIn;
 	SOCKET			Socket;
 	struct hostent* Host;
 
-	sprintf(
-		Buffer,
-		"POST %s HTTP/1.1\r\n"
-		"Host: %s\r\n"
-		"Content-Type: text/html\r\n"
-		"Content-Length: %u\r\n"
-		"User-Agent: Mozilla/4.0\r\n"
-		"\r\n"
-		"%s\r\n"
-		"\r\n\r\n",
-		url, host, strlen(data), data
-	);
+	packet << "POST " << url << " HTTP/1.1\r\n";
+	packet << "Host: " << host << "\r\n";
+	packet << "Content-Type: text/html\r\n";
+	packet << "Content-Length: " << strlen(data) << "\r\n";
+	packet << "User-Agent: Mozilla/4.0\r\n";
+	packet << "\r\n";
+	packet << data << "\r\n";
+	packet << "\r\n\r\n";
 
-	printf("---\n%s---\n", Buffer);
+#ifdef _DEBUG
+	std::cout << "---\n" << packet.str() << "---" << std::endl;
+#endif
 
 	Socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (Socket == INVALID_SOCKET)
@@ -96,7 +95,7 @@ void NetworkPost(LPSTR url, LPSTR host, LPSTR data)
 		return;
 	}
 
-	send(Socket, Buffer, strlen(Buffer), 0);
+	send(Socket, packet.str().c_str(), packet.str().length(), 0);
 
 	while (true)
 	{
@@ -105,34 +104,32 @@ void NetworkPost(LPSTR url, LPSTR host, LPSTR data)
 		int len = recv(Socket, &Buf, 1, 0);
 
 		// -- If closed gracefully (no error)
-		if (len < 0) { printf("\nrecv error!\n"); break; }
 		if (len == 0) break;
-		if (len > 0) printf("%c", Buf);
+		if (len < 0) { std::cout << "\nrecv error!" << std::endl; break; }
+		if (len > 0) std::cout << Buf;
 	}
+	std::cout << std::endl;
 
 	closesocket(Socket);
 }
 
 void NetworkGet(LPSTR url, LPSTR host, LPSTR data)
 {
-	char			Buffer[1024];
+	std::stringstream packet;
 	sockaddr_in		SIn;
 	SOCKET			Socket;
 	struct hostent* Host;
 
+	packet << "GET " << url << " HTTP/1.1\r\n";
+	packet << "Host: " << host << "\r\n";
+	packet << "Content-Type: text/html\r\n";
+	packet << "User-Agent: Mozilla/4.0\r\n";
+	packet << "\r\n";
+	packet << "\r\n";
 
-	sprintf(
-		Buffer,
-		"GET %s HTTP/1.1\r\n"
-		"Host: %s\r\n"
-		"Content-Type: text/html\r\n"
-		"User-Agent: Mozilla/4.0\r\n"
-		"\r\n"
-		"\r\n",
-		url, host
-	);
-
-	printf("---\n%s---\n", Buffer);
+#ifdef _DEBUG
+	std::cout << "---\n" << packet.str() << "---" << std::endl;
+#endif
 
 	Socket = socket(AF_INET, SOCK_STREAM, 0);
 	if (Socket == INVALID_SOCKET)
@@ -159,7 +156,7 @@ void NetworkGet(LPSTR url, LPSTR host, LPSTR data)
 		return;
 	}
 
-	send(Socket, Buffer, strlen(Buffer), 0);
+	send(Socket, packet.str().c_str(), packet.str().length(), 0);
 
 	while (true)
 	{
@@ -168,10 +165,12 @@ void NetworkGet(LPSTR url, LPSTR host, LPSTR data)
 		int len = recv(Socket, &Buf, 1, 0);
 
 		// -- If closed gracefully (no error)
-		if (len < 0) { printf("\nrecv error!\n"); break; }
 		if (len == 0) break;
-		if (len > 0) printf("%c", Buf);
+		if (len < 0) { std::cout << "\nrecv error!" << std::endl; break; }
+		if (len > 0) std::cout << Buf;
 	}
+
+	std::cout << std::endl;
 
 	closesocket(Socket);
 }
@@ -189,11 +188,10 @@ void NetworkConnect(LPSTR ip)
 
 	// Resolve the server address and port
 	iResult = getaddrinfo(ip, "25671", &hints, &result);
-	if (iResult != 0)
-	{
-		char error[256];
-		sprintf(error, "getaddrinfo failed: %d\n", iResult);
-		throw std::runtime_error(error);
+	if (iResult != 0) {
+		std::stringstream ess;
+		ess << "getaddrinfo failed: " << iResult;
+		throw std::runtime_error(ess.str());
 		return;
 	}
 
@@ -206,12 +204,11 @@ void NetworkConnect(LPSTR ip)
 	// Create a SOCKET for connecting to server
 	l_Sockets[l_Sockets.size() - 1] = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
 
-	if (l_Sockets[l_Sockets.size() - 1] == INVALID_SOCKET)
-	{
-		char error[256];
-		sprintf(error, "Error at socket(): %d\n", WSAGetLastError());
+	if (l_Sockets[l_Sockets.size() - 1] == INVALID_SOCKET) {
 		freeaddrinfo(result);
-		throw std::runtime_error(error);
+		std::stringstream ess;
+		ess << "Error at socket(): " << WSAGetLastError();
+		throw std::runtime_error(ess.str());
 		return;
 	}
 

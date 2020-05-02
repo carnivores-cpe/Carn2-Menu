@@ -4,8 +4,10 @@
 
 // -- Define no secure warnings for sanity when compiling
 #ifndef _CRT_SECURE_NO_WARNINGS
-#define _CRT_SECURE_NO_WARNINGS
+//#define _CRT_SECURE_NO_WARNINGS
 #endif
+
+#include "Targa.h"
 
 #include <Windows.h>
 //std
@@ -14,6 +16,7 @@
 #include <vector>
 #include <cstdint>
 #include <cstdio>
+#include <chrono>
 
 
 
@@ -80,6 +83,16 @@ if (OptRes==6) { WinW =1280; WinH=1024; }
 if (OptRes==7) { WinW =1600; WinH=1200; }
 */
 
+enum AudioSystemEnum {
+	AUDIO_SOFTWARE = 0,
+	AUDIO_DIRECTSOUND3D = 1,
+	AUDIO_AUREAL3D = 2,
+	AUDIO_EAX = 3,
+	// Custom audio begins here
+	AUDIO_OPENAL = 4,
+	AUDIO_XAUDIO = 5
+};
+
 // ======================================================================= //
 // Global Types & Classes
 // ======================================================================= //
@@ -100,208 +113,249 @@ struct Color16 {
 
 	Color16(uint16_t c, int a) :
 		r(c & 5),
-		g((c>>5 ) & 5),
-		b((c>>10) & 5),
+		g((c >> 5) & 5),
+		b((c >> 10) & 5),
 		a(a)
 	{}
 };
 #pragma pack(pop)
 typedef Color16 RGBA16;
 
-typedef struct _tagVertex {
-	float x,y,z;
-	short hide,bone;
+
+class TargaImage
+{
+public:
+	TARGAINFOHEADER m_Header;
+	uint8_t* m_Data;
+
+	TargaImage() : m_Header(), m_Data(nullptr) {}
+	~TargaImage() {
+		if (m_Data) delete[] m_Data;
+	}
+};
+
+
+class Timer
+{
+private:
+	static std::chrono::steady_clock::duration m_TimeStart;
+
+public:
+
+	static void Init()
+	{
+		Timer::m_TimeStart = std::chrono::steady_clock::now().time_since_epoch();
+	}
+
+	/* Replacement for winmm.lib : timeGetTime() */
+	static int64_t GetTime()
+	{
+		auto t = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch() - Timer::m_TimeStart);
+		return t.count();
+	}
+
+};
+
+
+/*typedef struct _tagVertex {
+	float x, y, z;
+	int16_t hide, bone;
 } TVertex;
 
 
 typedef struct _tagFace {
-	int		v1,v2,v3;
-	int		tx1,tx2,tx3;
-	int		ty1,ty2,ty3;
-	WORD	Flags,DMask;
-	int		Distant, Next, group;
-	char	reserv[12];
+	int32_t		v1, v2, v3;
+	int32_t		tx1, tx2, tx3;
+	int32_t		ty1, ty2, ty3;
+	uint16_t	Flags, DMask;
+	int32_t		Distant, Next, group;
+	uint32_t	reserv[3];
 } TFace;
 
 
-class TModel
+class Model
 {
 public:
-	int		VCount;
-	int		FCount;
-	int		TexLength;
+	int32_t		VCount;
+	int32_t		FCount;
+	uint32_t	TexLength;
 
-	void*	lpTexture;
+	void* lpTexture;
 
-	TVertex*	lpVertices;
-	TFace*		lpFace;
+	TVertex* lpVertices;
+	TFace* lpFace;
+};*/
+
+class Wave
+{
+public:
+	int16_t* lpData;
+	uint32_t Length;
+
+	Wave() :
+		lpData(nullptr),
+		Length(0U)
+	{}
+
+	~Wave()
+	{
+		if (lpData)
+			delete[] lpData;
+	}
 };
 
-class TWave
+
+class MenuItem
 {
 public:
-	short int*	lpData;
-	UINT		Length;
-
-	TWave()
-	{
-		lpData = NULL;
-		Length = 0;
-	}
-	~TWave()
-	{
-		if (lpData) delete [] lpData;
-	}
-};
-
-
-class TMenuItem
-{
-public:
-	uint16_t Image[800*600];
-	uint16_t Image_On[800*600];
-	uint8_t Image_Map[400*300];
+	uint16_t Image[800 * 600];
+	uint16_t Image_On[800 * 600];
+	uint8_t Image_Map[400 * 300];
 };
 
 
 class TPicture
 {
 public:
-	int w,h;
-	WORD *lpImage;
+	int32_t w, h;
+	uint16_t* lpImage;
 
-	TPicture()
-	{
-		w = 0;
-		h = 0;
-		lpImage = NULL;
-	}
+	TPicture() :
+		w(0),
+		h(0),
+		lpImage(nullptr)
+	{}
+
 	~TPicture()
 	{
-		if (lpImage) delete [] lpImage;
+		if (lpImage)
+			delete[] lpImage;
 	}
 };
 
 
-class TDinoInfo
+class DinoInfo
 {
 public:
-	char	Name[48],	//<- Creature Name
-			FName[48],	//<- File Name
-			PName[48];	//<- ???
+	std::string	Name; // Creature name
+	std::string	FilePath; // Character file path
+	std::string	PicturePath; // Picture file path
 
-	int		Health0,	//<- Base health
-			AI;			//<- AI code
+	int32_t Health0; // Base health
+	int32_t	AI; // AI index
 
-	BOOL DangerCall;	//<- Dangerous call
+	bool DangerCall; // Dangerous lure call
 
-	float	Mass,		//<- Weight of creature
-			Length,		//<- Length of creature
-			Radius,		//<- ???
-			SmellK,		//<- Scent Sensitivity
-			HearK,		//<- Audio Sensitivity
-			LookK,		//<- Visual Sensitivity
-			ShDelta;	//<- Height of ship hook from ground
-	int		Scale0,		//<- Base Scale
-			ScaleA,		//<- Scale Variation
-			BaseScore;	//<- Base score of creature
+	float Mass; // Weight of creature
+	float Length; // Length of creature
+	float Radius; // Area the creature occupies (for pathing and hit detection)
+	float SmellK; // Scent Sensitivity
+	float HearK; // Audio Sensitivity
+	float LookK; // Visual Sensitivity
+	float ShDelta; // Height of ship hook from ground
+	int32_t Scale0; // Base Scale
+	int32_t ScaleA; // Scale Variation
+	int32_t BaseScore; // Base score of creature
 
 	TPicture CallIcon;	//<- Icon associated with this species
 };
 
 
-typedef struct _TWeapInfo
-{
-	char	Name[48],	//<- Weapon Name
-			FName[48],	//<- Weapon File Name
-			BFName[48];	//<- ???
-
-	float	Power,		//<- Damage Per Shot of Weapon [0-9999]
-			Prec,		//<- Precision of Weapon [0-1]
-			Loud,		//<- Volume of Weapon [0-1]
-			Rate,		//<- Rate Of Fire, Shots Per Second
-			Recoil,		//<- Force of recoil [0-9999]
-			Optic;		//<- Zoom of weapon when iron-sighted [1-10]
-
-	int		Shots,		//<- Number of Bullets Per Clip/Chamber
-			Fall,		//<- Gravity on projectile during ray tracing
-			TraceC,		//<- ???
-			Reload,		//<- Shots before reload
-			Price;
-} TWeapInfo;
-
-class TAreaInfo
+class WeapInfo
 {
 public:
-	char	Name[48],	//<- Creature Name
-			MapFile[255],	//<- MAP filename
-			RscFile[255];	//<- RSC filename
+	std::string Name; //<- Weapon Name
+	std::string FilePath; //<- Weapon Character File Name
+	std::string BulletFilePath; //<- Bullet Icon File Name
 
-	int		Cost;			//<-Credits cost
-	int		Rank;			//<-Rank required/recommended to play map
+	float Power; // Damage Per Shot of Weapon [0.0~]
+	float Prec; // Precision of Weapon [0.0 - 1.1]
+	float Loud; // Volume of Weapon [0.0 - 1.1]
+	float Rate; // Rate Of Fire, Shots Per Second
+	float Recoil; // Force of recoil [0-9999]
+	float Optic; // Zoom of weapon when iron-sighted [1-10]
 
-	TPicture Thumbnail;	//<- Icon associated with this area
+	int32_t Shots; // Number of Bullets Per Clip/Mag/Tube
+	int32_t Fall; // Gravity on projectile during ray tracing (used for X-Bow)
+	int32_t TraceC; // Amount of projectiles per shot
+	int32_t Reload; // Shots before reload
+	int32_t	Price;
+};
+
+class AreaInfo
+{
+public:
+	std::string	Name; // Area Name
+	std::string	MapPath; // MAP filename
+	std::string	RscPath;	// RSC filename
+
+	int Cost; // Credits cost
+	int Rank; // Rank required/recommended to play map
+
+	std::vector<int> DinosAvail; // A list of animal AI indexes that are available on this map.
+
+	TPicture Thumbnail; // Preview icon/image associated with this area
 };
 
 class TKeyMap
 {
 public:
 	int32_t	fkForward,
-			fkBackward,
-			fkUp,
-			fkDown,
-			fkLeft,
-			fkRight,
-			fkFire,
-			fkShow,
-			fkSLeft,
-			fkSRight,
-			fkStrafe,
-			fkJump,
-			fkRun,
-			fkCrouch,
-			fkCall,
-			fkCCall,
-			fkBinoc,
-			fkSupply;
+		fkBackward,
+		fkUp,
+		fkDown,
+		fkLeft,
+		fkRight,
+		fkFire,
+		fkShow,
+		fkSLeft,
+		fkSRight,
+		fkStrafe,
+		fkJump,
+		fkRun,
+		fkCrouch,
+		fkCall,
+		fkCCall,
+		fkBinoc,
+		fkSupply;
 };
 
-class TOptions
+class Options
 {
 public:
-	// === Game === //
-	bool	ScentMode,
-			CamoMode,
-			RadarMode,
-			TranqMode;
-	int32_t	Aggression,
-			Density,
-			Sensitivity,
-			OptSys;
+	/* Game */
 
-	// === Graphics === //
-	int32_t	Resolution,
-			Resolution_W, Resolution_H, /// [NEW] Resolution in pixels
-			Textures,
-			ViewRange,
-			LevelOfDetailBias,			/// [NEW] Range where the Level of Detail decreases
-			Brightness,
-			AlphaColorKey,
-			RenderAPI;					/// The Render API/Version to use
-	bool	Fog,						/// Render volumetric fog
-			Shadows,					/// Render real-time shadows
-			Particles;					/// [NEW] Wether to render/process particles
+	bool ScentMode;
+	bool CamoMode;
+	bool RadarMode;
+	bool TranqMode;
+	int32_t	Aggression;
+	int32_t Density;
+	int32_t Sensitivity;
+	int32_t OptSys;
 
-	// === Audio === //
-	int32_t	SoundAPI;
+	/* Graphics */
 
-	// === Controls === //
-	TKeyMap KeyMap;
+	int32_t	Resolution; // ResolutionsEnum
+	int32_t Resolution_W, Resolution_H; // [NEW] Resolution in pixels
+	int32_t Textures;
+	int32_t ViewRange;
+	int32_t LevelOfDetailBias; // [NEW] Range where the Level of Detail decreases
+	int32_t Brightness;
+	int32_t AlphaColorKey;
+	int32_t RenderAPI; // The Render API/Version to use
+	bool Fog; // Render volumetric fog
+	bool Shadows; // Render real-time shadows
+	bool Particles; // [NEW] Wether to render/process particles
+
+	int32_t	SoundAPI; // Audio system
+
+	TKeyMap KeyMap; // Controls mapping
 	bool	MouseInvert;
 	int32_t	MouseSensitivity;
 };
 
-class TTrophyItem
+class TrophyItem
 {
 public:
 	int32_t ctype, weapon, phase, height, weight, score, date, time;
@@ -310,30 +364,30 @@ public:
 };
 
 
-class TStats
+class ProfileStats
 {
 public:
-	int32_t	smade,
-			success;
-	float	path,
-			time;
+	int32_t smade;
+	int32_t success;
+	float path;
+	float time;
 };
 
-class TProfile
+class Profile
 {
 public:
 
-	char		Name[128];
-	int32_t		RegNumber,
-				Score,
-				Rank;
-	TStats		Last,
-				Total;
-	TTrophyItem Body[24];
+	char Name[128]; // Leaving this as a char array for convenience
+	int32_t RegNumber;
+	int32_t Score;
+	int32_t Rank;
+	ProfileStats Last;
+	ProfileStats Total;
+	TrophyItem Body[24];
 
 };
 
-class TProfileShort
+class ProfileShort
 {
 public:
 
@@ -347,6 +401,7 @@ public:
 // Global Enums
 // ======================================================================= //
 enum MenuStateEnum {
+	//MENU_SPLASH, // Rework the menu to support this
 	MENU_REGISTER,
 	MENU_MAIN,
 	MENU_STATISTICS,
@@ -363,23 +418,24 @@ enum MenuStateEnum {
 EXTERNAL HINSTANCE				hInst;
 EXTERNAL HWND					hwndMain;
 EXTERNAL HDC					hdcMain;
-EXTERNAL HFONT					fnt_Small,
-								fnt_Midd,
-								fnt_Big;
+EXTERNAL HFONT					fnt_Small;
+EXTERNAL HFONT					fnt_Midd;
+EXTERNAL HFONT					fnt_Big;
 
-EXTERNAL TMenuItem				g_MenuItem;
+EXTERNAL MenuItem				g_MenuItem;
 EXTERNAL std::int32_t			g_PrevMenuState;
 EXTERNAL std::int32_t			g_MenuState;
 EXTERNAL std::string			g_TypingBuffer;
 
-EXTERNAL unsigned int			g_GameState;
+EXTERNAL uint32_t				g_GameState;
 
-EXTERNAL std::vector<TDinoInfo>	g_DinoInfo;
-EXTERNAL std::vector<TWeapInfo>	g_WeapInfo;
-EXTERNAL std::vector<TAreaInfo>	g_AreaInfo;
-EXTERNAL TProfile				g_UserProfile;
-EXTERNAL TProfileShort			g_Profiles[10];
-EXTERNAL TOptions				g_Options;
+EXTERNAL std::vector<DinoInfo>	g_DinoInfo;
+EXTERNAL std::vector<WeapInfo>	g_WeapInfo;
+EXTERNAL std::vector<AreaInfo>	g_AreaInfo;
+EXTERNAL uint32_t				g_ProfileIndex;
+EXTERNAL Profile				g_UserProfile;
+EXTERNAL ProfileShort			g_Profiles[10];
+EXTERNAL Options				g_Options;
 
 
 // ======================================================================= //
@@ -392,11 +448,10 @@ void ShutdownInterface();
 void InterfaceClear(uint16_t);
 void InterfaceBlt();
 void InterfaceSetFont(HFONT);
-void DrawRectangle(int,int,int,int, Color16);
-void DrawMenuItem(TMenuItem* mptr);
-void DrawPicture(int,int, int, int, uint16_t*);
-//void DrawText(int, int, std::string, uint32_t);
-void InitGameMenu(UINT);
+void DrawRectangle(int, int, int, int, Color16);
+void DrawMenuItem(MenuItem& menu);
+void DrawPicture(int, int, int, int, uint16_t*);
+void InitGameMenu();
 void LoadGameMenu(unsigned int);
 void MenuKeyDownEvent(uint16_t);
 void MenuMouseLEvent();
@@ -405,18 +460,19 @@ void ProcessMenu();
 /*** Resources ***/
 void LoadResourcesScript();
 void ReleaseResources();
-void LoadTrophy(TProfile &profile, int pr);
-void SaveTrophy(TProfile &profile);
+void LoadTrophy(Profile& profile, int pr);
+void SaveTrophy(Profile& profile);
+bool ReadTGAFile(const std::string& path, TargaImage& tga);
 
 /*** Networking ***/
-void	InitNetwork();
-void	ShutdownNetwork();
-void	NetworkGet( LPSTR url, LPSTR host, LPSTR data );
-void	NetworkPost( LPSTR url, LPSTR host, LPSTR data );
+void InitNetwork();
+void ShutdownNetwork();
+void NetworkGet(LPSTR url, LPSTR host, LPSTR data);
+void NetworkPost(LPSTR url, LPSTR host, LPSTR data);
 
 
 #ifdef _MAIN_
-EXTERNAL char KeysName[256][24] = {
+EXTERNAL char KeyNames[256][24] = {
 "...",
 "Esc",
 "1",
@@ -541,9 +597,9 @@ EXTERNAL char KeysName[256][24] = {
 "",
 "",
 "",
-"Mouse1",
-"Mouse2",
-"Mouse3",
+"MouseL",
+"MouseR",
+"MouseM",
 "<?>",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
@@ -553,7 +609,7 @@ EXTERNAL char KeysName[256][24] = {
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
-	};
+};
 #else
-   EXTERNAL char KeysName[128][24];
+EXTERNAL char KeyNames[128][24];
 #endif

@@ -166,7 +166,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		// Create Log Files
 		CreateLog();
 
-		InitGameMenu(0);
+		InitGameMenu();
 		CreateMainWindow();
 		InitNetwork();
 		InitInterface();

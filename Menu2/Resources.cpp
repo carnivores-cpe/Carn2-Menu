@@ -7,6 +7,7 @@
 */
 
 #include "Hunt.h"
+#include "Targa.h"
 
 #include <cstdlib>
 #include <iostream>
@@ -29,7 +30,7 @@ void ReadWeapons(FILE *stream)
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
-			TWeapInfo Blank;
+			WeapInfo Blank;
 			g_WeapInfo.push_back( Blank );
 
 			while (fgets( line, 255, stream))
@@ -55,17 +56,17 @@ void ReadWeapons(FILE *stream)
 				if (strstr(line, "name")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_WeapInfo[CurW].Name, &value[1]); }
+					g_WeapInfo[CurW].Name = &value[1]; }
 
 				if (strstr(line, "file")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_WeapInfo[CurW].FName, &value[1]);}
+					g_WeapInfo[CurW].FilePath = &value[1]; }
 
 				if (strstr(line, "pic")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_WeapInfo[CurW].BFName, &value[1]);}
+					g_WeapInfo[CurW].BulletFilePath = &value[1];}
 			}
 		}
 
@@ -82,7 +83,7 @@ void ReadCharacters(FILE *stream)
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
-			TDinoInfo Blank;
+			DinoInfo Blank;
 			g_DinoInfo.push_back( Blank );
 
 			while (fgets( line, 255, stream))
@@ -125,7 +126,7 @@ void ReadCharacters(FILE *stream)
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_DinoInfo[CurC].Name, &value[1]);
+					g_DinoInfo[CurC].Name = &value[1];
 				}
 
 				if (strstr(line, "file"))
@@ -136,7 +137,7 @@ void ReadCharacters(FILE *stream)
 					MessageBox(hwndMain, error, "Integer", MB_OK);*/
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_DinoInfo[CurC].FName, &value[1]);
+					g_DinoInfo[CurC].FilePath = &value[1];
 				}
 
 				if (strstr(line, "pic"))
@@ -144,7 +145,7 @@ void ReadCharacters(FILE *stream)
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_DinoInfo[CurC].PName, &value[1]);
+					g_DinoInfo[CurC].PicturePath = &value[1];
 				}
 			}
 		}
@@ -161,7 +162,7 @@ void ReadAreas(FILE *stream)
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
-			TAreaInfo Blank;
+			AreaInfo Blank;
 			g_AreaInfo.push_back( Blank );
 
 			while (fgets( line, 255, stream))
@@ -186,21 +187,21 @@ void ReadAreas(FILE *stream)
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_AreaInfo[CurC].Name, &value[1]);
+					g_AreaInfo[CurC].Name = &value[1];
 				}
 
 				if (strstr(line, "map"))
 				{
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_AreaInfo[CurC].MapFile, &value[1]);
+					g_AreaInfo[CurC].MapPath = &value[1];
 				}
 
 				if (strstr(line, "rsc"))
 				{
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					strcpy(g_AreaInfo[CurC].RscFile, &value[1]);
+					g_AreaInfo[CurC].RscPath = &value[1];
 				}
 
 				if (strstr(line, "thumbnail"))
@@ -255,10 +256,10 @@ void ReleaseResources()
 	g_AreaInfo.clear();
 }
 
-void LoadTrophy(TProfile& profile, int pr)
+void LoadTrophy(Profile& profile, int pr)
 {
 	//PlayerProfile.RegNumber
-	memset(&profile, 0, sizeof(TProfile));
+	memset(&profile, 0, sizeof(Profile));
 	profile.RegNumber = pr;
 
 	std::stringstream fname;
@@ -271,7 +272,7 @@ void LoadTrophy(TProfile& profile, int pr)
 		return;
 	}
 
-	fs.read((char*)&profile, sizeof(TProfile));
+	fs.read((char*)&profile, sizeof(Profile));
 
 	fs.read((char*)&g_Options.Aggression, 4);
 	fs.read((char*)&g_Options.Density, 4);
@@ -301,7 +302,7 @@ void LoadTrophy(TProfile& profile, int pr)
 }
 
 
-void SaveTrophy(TProfile& profile)
+void SaveTrophy(Profile& profile)
 {
 	std::stringstream fname;
 	fname << "trophy" << std::setfill('0') << std::setw(2) << profile.RegNumber << ".sav";
@@ -313,7 +314,7 @@ void SaveTrophy(TProfile& profile)
 		return;
 	}
 
-	fs.write((char*)&profile, sizeof(TProfile));
+	fs.write((char*)&profile, sizeof(Profile));
 
 	fs.write((char*)&g_Options.Aggression, 4);
 	fs.write((char*)&g_Options.Density, 4);
@@ -341,3 +342,38 @@ void SaveTrophy(TProfile& profile)
 	std::cout << "Trophy Saved." << std::endl;
 }
 
+
+bool ReadTGAFile(const std::string& path, TargaImage& tga)
+{
+	std::ifstream fs(path, std::ios::binary);
+
+	if (!fs.is_open()) {
+		std::cout << "Failed to open TGA file: " << path << std::endl;
+		return false;
+	}
+
+	fs.read((char*)&tga.m_Header, sizeof(TARGAINFOHEADER));
+
+	if (tga.m_Header.tgaColorMapType) {
+		std::cout << "Has a color palette: " << path << std::endl;
+		return false;
+	}
+
+	if (tga.m_Header.tgaImageType != TGA_IMAGETYPE_RGB) {
+		std::cout << "Not an RGB image: " << path << std::endl;
+		return false;
+	}
+
+	if (tga.m_Header.tgaIdentSize) {
+		fs.seekg(tga.m_Header.tgaIdentSize, std::ios::cur); // Skip Ident header
+	}
+
+	if (tga.m_Data)
+		delete[] tga.m_Data;
+
+	int size = (tga.m_Header.tgaWidth * (tga.m_Header.tgaBits / 8)) * tga.m_Header.tgaHeight;
+	tga.m_Data = new uint8_t[size];
+	fs.read((char*)tga.m_Data, size);
+
+	return true;
+}
