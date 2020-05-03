@@ -353,6 +353,8 @@ public:
 	TKeyMap KeyMap; // Controls mapping
 	bool	MouseInvert;
 	int32_t	MouseSensitivity;
+
+	void Default();
 };
 
 class TrophyItem
@@ -384,6 +386,8 @@ public:
 	ProfileStats Last;
 	ProfileStats Total;
 	TrophyItem Body[24];
+
+	void New(const std::string& name);
 
 };
 
@@ -433,6 +437,7 @@ EXTERNAL std::vector<DinoInfo>	g_DinoInfo;
 EXTERNAL std::vector<WeapInfo>	g_WeapInfo;
 EXTERNAL std::vector<AreaInfo>	g_AreaInfo;
 EXTERNAL uint32_t				g_ProfileIndex;
+EXTERNAL uint32_t				g_HiliteProfileIndex;
 EXTERNAL Profile				g_UserProfile;
 EXTERNAL ProfileShort			g_Profiles[10];
 EXTERNAL Options				g_Options;
@@ -451,9 +456,11 @@ void InterfaceSetFont(HFONT);
 void DrawRectangle(int, int, int, int, Color16);
 void DrawMenuItem(MenuItem& menu);
 void DrawPicture(int, int, int, int, uint16_t*);
+void DrawTextShadow(int x, int y, const std::string& text, uint32_t color);
 void InitGameMenu();
 void LoadGameMenu(unsigned int);
 void MenuKeyDownEvent(uint16_t);
+void MenuKeyCharEvent(uint16_t);
 void MenuMouseLEvent();
 void ProcessMenu();
 

@@ -75,7 +75,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Audio.cpp" />
-    <ClCompile Include="Characters.cpp" />
     <ClCompile Include="Hunt2.cpp" />
     <ClCompile Include="Menu.cpp" />
     <ClCompile Include="NetCode.cpp" />

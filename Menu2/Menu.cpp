@@ -13,6 +13,7 @@
 #include <iomanip>
 #include <sstream>
 #include <string>
+#include <thread>
 
 
 class MenuSet {
@@ -25,6 +26,14 @@ public:
 		x0(0), y0(0),
 		Count(0)
 	{}
+};
+
+
+enum MenuSetEnum {
+	OPT_GAME = 0,
+	OPT_KEYBINDINGS = 1,
+	OPT_VIDEO = 2,
+	OPT_MAX
 };
 
 
@@ -280,33 +289,6 @@ void InitGameMenu()
 	AddMenuItem(MenuOptions[2], "Textures");
 	AddMenuItem(MenuOptions[2], "Shadows");
 	AddMenuItem(MenuOptions[2], "ColorKey");
-
-	// -- Set default controls
-	g_Options.KeyMap.fkForward = 'W';
-	g_Options.KeyMap.fkBackward = 'S';
-	g_Options.KeyMap.fkSLeft = 'A';
-	g_Options.KeyMap.fkSRight = 'D';
-	g_Options.KeyMap.fkFire = VK_LBUTTON;
-	g_Options.KeyMap.fkShow = VK_RBUTTON;
-	g_Options.KeyMap.fkJump = VK_SPACE;
-	g_Options.KeyMap.fkCall = VK_MENU;
-	g_Options.KeyMap.fkBinoc = 'B';
-	g_Options.KeyMap.fkCrouch = 'C';
-	g_Options.KeyMap.fkRun = VK_LSHIFT;
-	g_Options.KeyMap.fkUp = VK_UP;
-	g_Options.KeyMap.fkDown = VK_DOWN;
-	g_Options.KeyMap.fkLeft = VK_LEFT;
-	g_Options.KeyMap.fkRight = VK_RIGHT;
-
-	/*
-	g_Options.KeyMap.fkMenu		= VK_ESCAPE;
-	g_Options.KeyMap.fkMap		= VK_TAB;
-	g_Options.KeyMap.fkNightVision= 'N';
-	g_Options.KeyMap.fkReload		= 'R';
-	g_Options.KeyMap.fkZoomIn		= VK_ADD;
-	g_Options.KeyMap.fkZoomOut	= VK_SUBTRACT;
-	g_Options.KeyMap.fkConsole	= 126; // Tilde '~'
-	*/
 }
 
 
@@ -569,21 +551,26 @@ void DrawRegistryMenu(POINT& p)
 	else
 		ss << g_TypingBuffer;
 
-	DrawTextShadow(330, 326, ss.str(), color);
+	DrawTextShadow(315, 326, ss.str(), color);
+
+	g_HiliteProfileIndex = g_ProfileIndex;
 
 	// 320, 370
 	for (int i = 0; i < 6; i++)
 	{
-		color = 0xB0B070;
+		color = RGB(255, 170, 10);
+
+		if (i == g_HiliteProfileIndex)
+			color = 0xB0B070;
 
 		if (p.x >= 308 && p.y >= (368 + (16 * i)) && p.x <= 408 && p.y <= (368 + (16 * i) + 16)) {
+			g_HiliteProfileIndex = i; //temporary, move to another function for user input
 			color = RGB(255, 42, 42);
 		}
 
 		std::string tname = g_Profiles[i].m_Name;
 
 		if (g_Profiles[i].m_Name.empty()) {
-			color = RGB(255, 170, 10);
 			tname = "...";
 		}
 
@@ -594,42 +581,61 @@ void DrawRegistryMenu(POINT& p)
 }
 
 
+void MenuEventClickOptions(int id)
+{
+
+}
+
+
 void DrawOptionsMenu()
 {
 	int c = RGB(239, 228, 176);
 
 	InterfaceSetFont(fnt_Big);
 
-	//===== CONTROLS =====//
-	//char keymap_input_str[80];
+	// Game options
+	for (int i = 0; i < MenuOptions[OPT_GAME].Count; i++) {
+		int x0 = MenuOptions[OPT_GAME].x0;
+		int y0 = MenuOptions[OPT_GAME].y0 + (25 * i);
 
-	for (int m = 0; m < 3; m++) {
-		for (int i = 0; i < MenuOptions[m].Count; i++) {
-			std::string s = MenuOptions[m].Item[i];
-			int x0 = MenuOptions[m].x0;
-			int y0 = MenuOptions[m].y0 + (25 * i);
+		DrawTextShadow(x0, y0, MenuOptions[OPT_GAME].Item[i], c);
+	}
 
-			std::stringstream ss;
+	// Control key bindings
+	for (int i = 0; i < MenuOptions[OPT_KEYBINDINGS].Count; i++) {
+		int x0 = MenuOptions[OPT_KEYBINDINGS].x0;
+		int y0 = MenuOptions[OPT_KEYBINDINGS].y0 + (25 * i);
 
-			ss << KeyNames[MapVKKey(*((int32_t*)&g_Options.KeyMap + i))];
+		std::stringstream ss;
 
-			if (m == 1) {
-				//DrawTextShadow(x0 - (GetTextW(hdcCMain, MenuOptions[m].Item[i]) + 5), y0, MenuOptions[m].Item[i], c);
-				DrawTextShadow(x0 - 160, y0, MenuOptions[m].Item[i], c);
-				DrawTextShadow(x0 + 5, y0, ss.str(), c);
-			}
-			else {
-				DrawTextShadow(x0, y0, s, c);
-			}
+		ss << KeyNames[MapVKKey(*((int32_t*)&g_Options.KeyMap + i))];
 
-			//sprintf(keymap_input_str, "Forward: %s", KeysName[MapVKKey( *((int32_t*)&g_Options.KeyMap + i) )]);
-			//DrawTextShadow(442, 86 + (i*25), keymap_input_str, c);
-		}
+		//DrawTextShadow(x0 - (GetTextW(hdcCMain, MenuOptions[m].Item[i]) + 5), y0, MenuOptions[m].Item[i], c);
+		DrawTextShadow(x0 - 160, y0, MenuOptions[OPT_KEYBINDINGS].Item[i], c);
+		DrawTextShadow(x0 + 5, y0, ss.str(), c);
+	}
+
+	// Video/Graphics options
+	for (int i = 0; i < MenuOptions[OPT_VIDEO].Count; i++) {
+		int x0 = MenuOptions[OPT_VIDEO].x0;
+		int y0 = MenuOptions[OPT_VIDEO].y0 + (25 * i);
+
+		DrawTextShadow(x0, y0, MenuOptions[OPT_VIDEO].Item[i], c);
 	}
 
 	InterfaceSetFont(NULL);
 }
 
+
+#define FPS_TARGET 60L
+#define FRAME_TIME_DELTA (1000L / FPS_TARGET) // The time in milliseconds a frame takes to process to achieve FPS_TARGET
+
+int64_t g_PrevFrameTime = 0;
+#ifdef _DEBUG
+int32_t g_Frames = 0;
+int32_t g_FramesPerSecond = 0;
+int64_t g_PrevFrameCountTime = 0;
+#endif
 
 /*
 Perform per-frame/tick update of the menus
@@ -688,24 +694,68 @@ void ProcessMenu()
 		DrawRegistryMenu(p);
 	} break;
 	case MENU_MAIN: {
+		if (g_PrevMenuState != g_MenuState) {/* Menu Init */}
 		DrawProfileMenu();
 	} break;
 	case MENU_STATISTICS: {
+		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
 		DrawStatisticsMenu();
 	} break;
 	case MENU_QUIT: {
+		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
 		DrawProfileMenu();
 	} break;
 	case MENU_OPTIONS: {
+		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
 		DrawOptionsMenu();
 	} break;
 	case MENU_CREDITS: {
+		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
 		// -- do rendering
 	} break;
 	case MENU_HUNT: {
+		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
 		DrawHuntMenu();
 	} break;
 	}
+
+#ifdef _DEBUG
+	// Perform some framerate metric stuff, only for Debug builds though
+	g_Frames++;
+
+	int64_t t = Timer::GetTime();
+	int64_t t_diff = t - g_PrevFrameTime;
+
+	std::stringstream ss;
+	ss << "FPS: " << g_FramesPerSecond;
+	DrawTextShadow(2, 2, ss.str(), RGB(255, 20, 20));
+	ss.str(""); ss.clear();
+
+	ss << "FrameTime: " << t_diff << "ms";
+	DrawTextShadow(2, 2 + 16, ss.str(), RGB(255, 20, 20));
+
+	if (t_diff < FRAME_TIME_DELTA) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_TIME_DELTA - t_diff));
+	}
+
+	if ((t - g_PrevFrameCountTime) >= 1000) {
+		g_FramesPerSecond = g_Frames;
+		g_Frames = 0;
+		g_PrevFrameCountTime = t;
+	}
+
+	g_PrevFrameTime = Timer::GetTime();
+#else // Release frame limiter
+
+	int64_t t = Timer::GetTime();
+	int64_t t_diff = t - g_PrevFrameTime;
+
+	if (t_diff < 16) {
+		std::this_thread::sleep_for(std::chrono::milliseconds(16 - t_diff));
+	}
+
+	g_PrevFrameTime = Timer::GetTime();
+#endif
 
 	// Draw the GDI buffer to the window
 	InterfaceBlt();
@@ -716,30 +766,41 @@ void ProcessMenu()
 
 void MenuKeyDownEvent(uint16_t keycode)
 {
-	if (keycode == VK_ESCAPE)
-	{
-		ChangeMenuState(MENU_QUIT);
-		LoadGameMenu(g_MenuState);
-		return;
-	}
-
-	if (g_MenuState == MENU_CREDITS)
-	{
+	if (g_MenuState == MENU_CREDITS) {
 		ChangeMenuState(MENU_MAIN);
 		LoadGameMenu(g_MenuState);
 		return;
 	}
-	else if (g_MenuState == MENU_REGISTER)
-	{
+	else if (g_MenuState == MENU_REGISTER) {
 		if (keycode == VK_RETURN)
 		{
 			// -- Create new save profile
 			//SaveTrophy();
 		}
-		else if (keycode == VK_BACK)
-		{
-			if (g_TypingBuffer.size() > 0)
+		return;
+	}
+
+	if (keycode == VK_ESCAPE) {
+		ChangeMenuState(MENU_QUIT);
+		LoadGameMenu(g_MenuState);
+		return;
+	}
+}
+
+
+void MenuKeyCharEvent(uint16_t wParam)
+{
+	if (g_MenuState == MENU_REGISTER) {
+		if (wParam == 8) {
+			if (!g_TypingBuffer.empty())
 				g_TypingBuffer.pop_back();
+		}
+		else {
+			if (g_TypingBuffer.size() < 19) {
+				if (wParam >= 32 || wParam <= 128) {
+					g_TypingBuffer.push_back(static_cast<char>(wParam));
+				}
+			}
 		}
 	}
 }
@@ -762,11 +823,22 @@ void MenuMouseLEvent()
 	{
 	case MENU_REGISTER: {
 		if (id == 1) {
+			if (g_Profiles[g_ProfileIndex].m_Name.empty()) {
+				g_UserProfile.New(g_TypingBuffer);
+				g_Options.Default();
+				SaveTrophy(g_UserProfile);
+			}
+			else {
+				LoadTrophy(g_UserProfile, g_ProfileIndex);
+			}
+
 			ChangeMenuState(MENU_MAIN);
-			LoadTrophy(g_UserProfile, g_ProfileIndex);
 		}
 		else if (id == 2) {
 			// Delete the selected 'save'
+		}
+		else {
+			g_ProfileIndex = g_HiliteProfileIndex;
 		}
 	} break;
 	case MENU_MAIN: {
@@ -786,6 +858,7 @@ void MenuMouseLEvent()
 	} break;
 	case MENU_OPTIONS: {
 		if (id == 4) ChangeMenuState(MENU_MAIN);
+		else MenuEventClickOptions(id);
 	} break;
 	case MENU_CREDITS: {
 		ChangeMenuState(MENU_MAIN);

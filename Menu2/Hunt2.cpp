@@ -21,6 +21,7 @@
 
 std::streambuf* g_COutBuf = nullptr;
 std::ofstream g_LogFile;
+std::chrono::steady_clock::duration Timer::m_TimeStart;
 
 
 void CreateLog()
@@ -77,19 +78,7 @@ BOOL CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lParam)
 	break;
 	case WM_CHAR:
 	{
-		if (g_MenuState == MENU_REGISTER)
-		{
-			if (wParam == 8) {
-				if (g_TypingBuffer.empty()) g_TypingBuffer.pop_back();
-			}
-			else {
-				if (g_TypingBuffer.size() < 24) {
-					if (wParam >= 32 || wParam <= 128) {
-						g_TypingBuffer.push_back(static_cast<char>(wParam));
-					}
-				}
-			}
-		}
+		MenuKeyCharEvent(wParam);
 	}
 	break;
 	default:
@@ -161,6 +150,7 @@ int main(int argc, char* argv[]) {
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow) {
 #endif
 	MSG msg = MSG();
+	Timer::Init();
 
 	try {
 		// Create Log Files
@@ -188,9 +178,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 			{
 				if (GetActiveWindow() == hwndMain) {
 					ProcessMenu();
+					// We need to sleep this_thread every frame, because the program emits a strange subtle 'noise' otherwise. It also
+					// renders way too many frames
+					//std::this_thread::sleep_for(std::chrono::milliseconds(5));
 				}
 				else {
-					std::this_thread::sleep_for(std::chrono::milliseconds(10));
+					std::this_thread::sleep_for(std::chrono::milliseconds(50));
 				}
 			}
 		}

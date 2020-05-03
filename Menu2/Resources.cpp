@@ -295,6 +295,8 @@ void LoadTrophy(Profile& profile, int pr)
 	fs.read((char*)&g_Options.SoundAPI, 4);
 	fs.read((char*)&g_Options.RenderAPI, 4);
 
+	//fs.read((char*)profile.Body, sizeof(TrophyItem) * 24);
+
 	//SetupRes();
 
 	//TrophyRoom.RegNumber = rn;
@@ -337,6 +339,8 @@ void SaveTrophy(Profile& profile)
 	fs.write((char*)&g_Options.SoundAPI, 4);
 	fs.write((char*)&g_Options.RenderAPI, 4);
 
+	fs.write((char*)profile.Body, sizeof(TrophyItem) * 24);
+
 	//SetupRes();
 
 	std::cout << "Trophy Saved." << std::endl;
@@ -377,3 +381,66 @@ bool ReadTGAFile(const std::string& path, TargaImage& tga)
 
 	return true;
 }
+
+
+void Profile::New(const std::string& name)
+{
+	memset(Name, 0, 128);
+	memcpy(Name, name.data(), name.length());
+	RegNumber = g_ProfileIndex;
+	Score = 100; // TODO get this from _RES
+	Rank = 0;
+	memset(&Last, 0, sizeof(ProfileStats));
+	memset(&Total, 0, sizeof(ProfileStats));
+	memset(Body, 0, sizeof(TrophyItem) * 24);
+}
+
+
+void Options::Default()
+{
+	this->Aggression = 0;
+	this->Density = 0;
+	this->Sensitivity = 0;
+	this->Resolution = 5;
+	this->Fog = true;
+	this->Textures = 1;
+	this->ViewRange = 10;
+	this->Shadows = true;
+	this->MouseSensitivity = 128;
+	this->Brightness = 0;
+	// -- Set default controls
+	this->KeyMap.fkForward = 'W';
+	this->KeyMap.fkBackward = 'S';
+	this->KeyMap.fkSLeft = 'A';
+	this->KeyMap.fkSRight = 'D';
+	this->KeyMap.fkFire = VK_LBUTTON;
+	this->KeyMap.fkShow = VK_RBUTTON;
+	this->KeyMap.fkJump = VK_SPACE;
+	this->KeyMap.fkCall = VK_MENU;
+	this->KeyMap.fkBinoc = 'B';
+	this->KeyMap.fkCrouch = 'C';
+	this->KeyMap.fkRun = VK_LSHIFT;
+	this->KeyMap.fkUp = VK_UP;
+	this->KeyMap.fkDown = VK_DOWN;
+	this->KeyMap.fkLeft = VK_LEFT;
+	this->KeyMap.fkRight = VK_RIGHT;
+	/*
+	this->KeyMap.fkMenu		= VK_ESCAPE;
+	this->KeyMap.fkMap		= VK_TAB;
+	this->KeyMap.fkNightVision= 'N';
+	this->KeyMap.fkReload		= 'R';
+	this->KeyMap.fkZoomIn		= VK_ADD;
+	this->KeyMap.fkZoomOut	= VK_SUBTRACT;
+	this->KeyMap.fkConsole	= 126; // Tilde '~'
+	*/
+	this->MouseInvert = false;
+	this->ScentMode = 0;
+	this->CamoMode = 0;
+	this->RadarMode = 0;
+	this->TranqMode = 0;
+	this->AlphaColorKey = 0;
+	this->OptSys = 0;
+	this->SoundAPI = 0;
+	this->RenderAPI = 0;
+}
+
