@@ -55,15 +55,17 @@
 1364423462 source:d:\programming\carn2 menu\menu2\characters.cpp
 	"Hunt.h"
 
-1588379663 d:\programming\carn2 menu\menu2\hunt.h
+1588508966 d:\programming\carn2 menu\menu2\hunt.h
+	"Targa.h"
 	<Windows.h>
 	<fstream>
 	<string>
 	<vector>
 	<cstdint>
 	<cstdio>
+	<chrono>
 
-1588383650 source:d:\programming\carn2 menu\menu2\hunt2.cpp
+1588475391 source:d:\programming\carn2 menu\menu2\hunt2.cpp
 	"Hunt.h"
 	"resource.h"
 	<iostream>
@@ -75,31 +77,37 @@
 
 1588382199 d:\programming\carn2 menu\menu2\resource.h
 
-1588384595 source:d:\programming\carn2 menu\menu2\menu.cpp
+1588510388 source:d:\programming\carn2 menu\menu2\menu.cpp
 	"Hunt.h"
 	<cmath>
 	<iostream>
 	<iomanip>
 	<sstream>
 	<string>
+	<thread>
 
-1588387065 source:d:\programming\carn2 menu\menu2\menu2.rc
+1588387208 source:d:\programming\carn2 menu\menu2\menu2.rc
+	"resource.h"
 	"resource.h"
 	"winres.h"
-	"resource.h"
 
-1588383752 source:d:\programming\carn2 menu\menu2\netcode.cpp
+1588423589 source:d:\programming\carn2 menu\menu2\netcode.cpp
 	"Hunt.h"
 	<WinSock2.h>
 	<ws2tcpip.h>
 	<iostream>
+	<sstream>
 
-1588382161 source:d:\programming\carn2 menu\menu2\resources.cpp
+1588474854 source:d:\programming\carn2 menu\menu2\resources.cpp
 	"Hunt.h"
+	"Targa.h"
 	<cstdlib>
 	<iostream>
 	<iomanip>
 	<sstream>
 	<fstream>
 	<string>
+
+1588394919 d:\programming\carn2 menu\menu2\targa.h
+	<cstdint>
 

@@ -5,58 +5,71 @@
 		<Option title="Menu2" />
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
+		<Option show_notes="1">
+			<notes>
+				<![CDATA[Welcome to the Carnivores 'Open-Menu' project!
+Spearheaded by Rexhunter99 (Cool Breeze)
+GitHub: https://github.com/carnivores-cpe/Carn2-Menu
+--------------------------------------------------------------
+
+When getting started, please check the current issues list for any bug fixing that needs to be completed before working on any new features if you are contributing to the master branch:
+https://github.com/carnivores-cpe/Carn2-Menu/issues
+
+If you are implementing your own features, please fork this project to your own repository and contribute there, this project's master branch is specifically to provide a modern replacement for the basic Carnivores 2 and Ice Age games.
+
+Cross Compiler:
+--------------------------------------------------------------
+Please ensure all  of your code is compliant with Microsoft's Visual C++ compiler as that is the primary compiler used on this project and by contributors in general.
+If you need to write something MinGW compatible only, please encase it in preprocessor statements checking for __MINGW__ and leave a note in the source as well as on the GIT Commit log.
+
+Compiler Note:
+--------------------------------------------------------------
+This project requires C++11 or C++14 standard but in the future may use C++17 standard, the standard MinGW GCC compiler that comes with Code::Blocks does not support C++17 or if it does, it is not an included compiler option in the build options, feel free to try compiling with the manual flag `-std=c++17`
+I've been using the MinGW W64 GCC Compiler, and thus all my GCC binaries are 64-bit.]]>
+			</notes>
+		</Option>
 		<Build>
 			<Target title="Debug">
-				<Option output="../Debug/Carn2-dbg" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="../Debug/" />
-				<Option object_output="Debug/" />
+				<Option output="../Debug/$(PROJECTNAME)-$(TARGET_NAME)" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../$(TARGET_NAME)/" />
+				<Option object_output="$(TARGET_NAME)/" />
 				<Option type="1" />
-				<Option compiler="gcc" />
+				<Option compiler="w64_gnu_gcc_compiler" />
 				<Compiler>
 					<Add option="-Wall" />
-					<Add option="-std=c++11" />
-					<Add option="-m32" />
 					<Add option="-g" />
+					<Add option="-std=c++17" />
 					<Add option="-D_DEBUG" />
 				</Compiler>
-				<Linker>
-					<Add option="-m32" />
-				</Linker>
 			</Target>
 			<Target title="Release">
-				<Option output="../Release/Carn2" prefix_auto="1" extension_auto="1" />
-				<Option working_dir="../Release/" />
-				<Option object_output="Release/" />
+				<Option output="../$(TARGET_NAME)/$(PROJECTNAME)-$(TARGET_NAME)" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="../$(TARGET_NAME)/" />
+				<Option object_output="$(TARGET_NAME)/" />
 				<Option type="0" />
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-O3" />
 					<Add option="-Wall" />
-					<Add option="-std=c++11" />
-					<Add option="-m32" />
+					<Add option="-std=c++17" />
 					<Add option="-DNDEBUG" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add option="-m32" />
 				</Linker>
 			</Target>
 		</Build>
 		<Compiler>
 			<Add option="-Wall" />
-			<Add option="-std=c++11" />
-			<Add option="-m32" />
 			<Add option="-D_WIN32_WINNT=0x701" />
 		</Compiler>
 		<Linker>
-			<Add option="-m32" />
 			<Add option="-lgdi32" />
 			<Add option="-luser32" />
 			<Add option="-lWs2_32" />
 			<Add option="-lWinmm" />
 		</Linker>
 		<Unit filename="Audio.cpp" />
-		<Unit filename="Characters.cpp" />
 		<Unit filename="Hunt.h" />
 		<Unit filename="Hunt2.cpp" />
 		<Unit filename="Menu.cpp" />
@@ -69,9 +82,6 @@
 		<Unit filename="action.ico" />
 		<Unit filename="resource.h" />
 		<Extensions>
-			<code_completion />
-			<envvars />
-			<debugger />
 			<lib_finder disable_auto="1" />
 		</Extensions>
 	</Project>
