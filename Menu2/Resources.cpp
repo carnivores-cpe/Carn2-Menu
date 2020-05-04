@@ -35,7 +35,7 @@ void ReadWeapons(FILE *stream)
 
 			while (fgets( line, 255, stream))
 			{
-				int CurW = g_WeapInfo.size()-1;
+				size_t CurW = g_WeapInfo.size()-1;
 
 				if (strstr(line, "}")) { break; }
 				value = strstr(line, "=");
@@ -161,13 +161,10 @@ void ReadAreas(FILE *stream)
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
-			AreaInfo Blank;
-			g_AreaInfo.push_back( Blank );
+			AreaInfo area;
 
 			while (fgets( line, 255, stream))
 			{
-				int CurC = g_AreaInfo.size()-1;
-
 				if (strstr(line, "}"))
 				{
 					break;
@@ -178,22 +175,22 @@ void ReadAreas(FILE *stream)
 					throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "cost"   ))	g_AreaInfo[CurC].m_Cost = atoi(value);
-				if (strstr(line, "rank"))		g_AreaInfo[CurC].m_Rank = atoi(value);
+				if (strstr(line, "cost"   ))	area.m_Cost = atoi(value);
+				if (strstr(line, "rank"))		area.m_Rank = atoi(value);
 
 				if (strstr(line, "name"))
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_AreaInfo[CurC].m_Name = &value[1];
+					area.m_Name = &value[1];
 				}
 
 				if (strstr(line, "pname"))
 				{
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_AreaInfo[CurC].m_ProjectName = &value[1];
+					area.m_ProjectName = &value[1];
 				}
 
 				if (strstr(line, "thumbnail"))
@@ -202,9 +199,11 @@ void ReadAreas(FILE *stream)
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
 					///TODO: Load TPicture
-					//strcpy(g_AreaInfo[CurC].Thumbnail, &value[1]);
+					//strcpy(area.Thumbnail, &value[1]);
 				}
 			}
+
+			g_AreaInfo.push_back(area);
 		}
 
 	}

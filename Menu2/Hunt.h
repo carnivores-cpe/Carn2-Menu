@@ -11,6 +11,7 @@
 
 #include <Windows.h>
 //std
+#include <array>
 #include <fstream>
 #include <string>
 #include <vector>
@@ -35,12 +36,15 @@
 // ======================================================================= //
 // Global Enumerators
 // ======================================================================= //
-enum GameStateEnum
+enum RankEnum
 {
-	STATE_SPLASH = 0,
-	STATE_MENU,
-	STATE_LOADING,
-	STATE_GAME
+	RANK_NOVICE = 0,
+	RANK_BEGINNER = 0,
+	RANK_INTERMEDIATE = 1,
+	RANK_ADVANCED = 1,
+	RANK_MASTER = 2,
+	RANK_EXPERT = 2,
+	RANK_MAX
 };
 
 enum AIIndexEnum
@@ -201,6 +205,9 @@ public:
 
 class MenuItem
 {
+private:
+	std::array<bool, 256> m_ElementSet;
+
 public:
 	uint16_t m_Image[800 * 600];
 	uint16_t m_Image_On[800 * 600];
@@ -210,6 +217,33 @@ public:
 		if (x >= 400 || y >= 300)
 			throw std::out_of_range("GetID() coordinates are beyond the range of 400x300!");
 		return m_Image_Map[x + (y * 400)];
+	}
+
+	void ResetElementSet() {
+		for (unsigned i = 0; i < m_ElementSet.size(); ++i) {
+			m_ElementSet[i] = false;
+		}
+	}
+
+	void ToggleIsElementSet(unsigned id) {
+		if (!(id < m_ElementSet.size())) {
+			throw std::out_of_range("ToggleIsElementSet() `id` is out of range!");
+		}
+		m_ElementSet[id] = !m_ElementSet[id];
+	}
+
+	bool GetIsElementSet(unsigned id) const {
+		if (!(id < m_ElementSet.size())) {
+			throw std::out_of_range("GetIsElementSet() `id` is out of range!");
+		}
+		return m_ElementSet[id];
+	}
+
+	void SetIsElementSet(unsigned id, bool b) {
+		if (!(id < m_ElementSet.size())) {
+			throw std::out_of_range("SetIsElementSet() `id` is out of range!");
+		}
+		m_ElementSet[id] = b;
 	}
 };
 
@@ -288,6 +322,26 @@ public:
 	std::vector<int> m_DinosAvail; // A list of animal AI indexes that are available on this map.
 
 	Picture m_Thumbnail; // Preview icon/image associated with this area
+
+	AreaInfo() :
+		m_Name(""),
+		m_ProjectName(""),
+		m_Cost(0),
+		m_Rank(RANK_NOVICE),
+		m_DinosAvail(),
+		m_Thumbnail()
+	{
+	}
+
+	AreaInfo(const AreaInfo& a) :
+		m_Name(a.m_Name),
+		m_ProjectName(a.m_ProjectName),
+		m_Cost(a.m_Cost),
+		m_Rank(a.m_Rank),
+		m_DinosAvail(a.m_DinosAvail),
+		m_Thumbnail(a.m_Thumbnail)
+	{
+	}
 };
 
 class TKeyMap
@@ -349,6 +403,7 @@ public:
 
 	void Default();
 };
+
 
 class TrophyItem
 {
@@ -449,14 +504,10 @@ void InterfaceClear(uint16_t);
 void InterfaceBlt();
 void InterfaceSetFont(HFONT);
 void DrawRectangle(int, int, int, int, Color16);
-void DrawMenuItem(MenuItem& menu);
 void DrawPicture(int, int, int, int, uint16_t*);
-void DrawTextShadow(int x, int y, const std::string& text, uint32_t color);
-void InitGameMenu();
-void LoadGameMenu(unsigned int);
-void MenuKeyDownEvent(uint16_t);
+void DrawTextShadow(int x, int y, const std::string& text, uint32_t color, int align);
+void LoadGameMenu(int32_t);
 void MenuKeyCharEvent(uint16_t);
-void MenuMouseLEvent();
 void ProcessMenu();
 
 /*** Resources ***/

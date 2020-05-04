@@ -47,7 +47,7 @@ void CloseLogs()
 }
 
 
-BOOL CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lParam)
 {
 	switch (message)
 	{
@@ -59,28 +59,18 @@ BOOL CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lParam)
 		PostQuitMessage(0);
 		break;
 
-	case WM_LBUTTONDOWN:
+	case WM_KEYDOWN:
 	{
-		MenuMouseLEvent();
-	}
-	break;
-	case WM_RBUTTONDOWN:
-	{
-		//MenuMouseREvent();
+#ifdef _DEBUG
+		if (wParam == VK_F9) { PostQuitMessage(1); }
+#endif
 	}
 	break;
 
-	case WM_KEYDOWN:
-	{
-		if (wParam == VK_F9) { PostQuitMessage(1); }
-		MenuKeyDownEvent(wParam);
-	}
-	break;
 	case WM_CHAR:
-	{
 		MenuKeyCharEvent(wParam);
-	}
-	break;
+		break;
+
 	default:
 		return (DefWindowProc(hwnd, message, wParam, lParam));
 	}
@@ -156,7 +146,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		// Create Log Files
 		CreateLog();
 
-		InitGameMenu();
 		CreateMainWindow();
 		InitNetwork();
 		InitInterface();
@@ -203,5 +192,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	UnregisterClass("CarnivoresMenu2", hInst);
 	CloseLogs();
 
+#ifdef _DEBUG
+	return (int)msg.wParam;
+#else
 	return msg.wParam;
+#endif
 }

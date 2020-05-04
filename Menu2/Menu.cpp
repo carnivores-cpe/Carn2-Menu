@@ -21,10 +21,16 @@ public:
 	int			x0, y0;
 	int			Count;
 	std::string	Item[32];
+	int32_t		Selected;
+	int32_t		Hilite;
+	RECT		Rect;
 
 	MenuSet() :
 		x0(0), y0(0),
-		Count(0)
+		Count(0),
+		Selected(-1),
+		Hilite(-1),
+		Rect({ 0,0,0,0 })
 	{}
 };
 
@@ -37,7 +43,18 @@ enum MenuSetEnum {
 };
 
 
+enum DrawTextAlignEnum {
+	// Uses the same values as wingdi.h TA_LEFT and so on.
+	// TODO: Write a conversion function for Linux if we port it to Linux
+	DTA_LEFT = 0,
+	DTA_RIGHT = 2,
+	DTA_CENTER = 6,
+	DTA_BOTTOM = 8
+};
+
+
 MenuSet MenuOptions[3];
+
 void* lpVideoBuf;
 HDC hdcCMain;
 HBITMAP bmpMain;
@@ -46,27 +63,37 @@ HFONT hfntOld;
 POINT g_CursorPos;
 
 
+// String table
 const char st_Boolean[2][4] = { "Off", "On" };
 const char st_HMLText[4][8] = { "Low", "Medium", "High", "Ultra" };
+
+
+void WaitForMouseRelease()
+{
+	while (GetAsyncKeyState(VK_RBUTTON) & 0x80000000);
+	while (GetAsyncKeyState(VK_MBUTTON) & 0x80000000);
+	while (GetAsyncKeyState(VK_LBUTTON) & 0x80000000);
+}
 
 
 void ChangeMenuState(int32_t ms)
 {
 	g_PrevMenuState = g_MenuState;
 	g_MenuState = ms;
+	LoadGameMenu(g_MenuState);
 }
 
 int GetTextW(HDC hdc, const std::string& s)
 {
 	SIZE sz;
-	GetTextExtentPoint(hdc, s.c_str(), s.length(), &sz);
+	GetTextExtentPoint(hdc, s.c_str(), (int)s.length(), &sz);
 	return sz.cx;
 }
 
 int GetTextH(HDC hdc, const std::string& s)
 {
 	SIZE sz;
-	GetTextExtentPoint(hdc, s.c_str(), s.length(), &sz);
+	GetTextExtentPoint(hdc, s.c_str(), (int)s.length(), &sz);
 	return sz.cy;
 }
 
@@ -87,6 +114,9 @@ void AddMenuItem(MenuSet& ms, const std::string& txt)
 }
 
 
+/*
+Initialise all the required settings and interface elements
+*/
 void InitInterface()
 {
 	fnt_Big = CreateFont(
@@ -148,6 +178,60 @@ void InitInterface()
 	g_MenuState = 0;
 	g_TypingBuffer = "";
 	LoadGameMenu(0);
+
+	g_ProfileIndex = 0;
+
+	int m = OPT_GAME;
+	MenuOptions[m].x0 = 70;
+	MenuOptions[m].y0 = 85;
+	MenuOptions[m].Count = 0;
+	AddMenuItem(MenuOptions[m], "Agressivity");
+	AddMenuItem(MenuOptions[m], "Density");
+	AddMenuItem(MenuOptions[m], "Sensitivity");
+	AddMenuItem(MenuOptions[m], "Measurement");
+	AddMenuItem(MenuOptions[m], "Render");
+	AddMenuItem(MenuOptions[m], "Audio");
+	MenuOptions[m].Rect = { 190 - 140, 85, 190 + 140, 85 + (MenuOptions[0].Count * 25) };
+
+	m = OPT_KEYBINDINGS;
+	MenuOptions[m].x0 = 610;
+	MenuOptions[m].y0 = 85;
+	MenuOptions[m].Count = 0;
+	AddMenuItem(MenuOptions[m], "Forward");
+	AddMenuItem(MenuOptions[m], "Backward");
+	AddMenuItem(MenuOptions[m], "Turn Up");
+	AddMenuItem(MenuOptions[m], "Turn Down");
+	AddMenuItem(MenuOptions[m], "Turn Left");
+	AddMenuItem(MenuOptions[m], "Turn Right");
+	AddMenuItem(MenuOptions[m], "Fire");
+	AddMenuItem(MenuOptions[m], "Draw Weapon");
+	AddMenuItem(MenuOptions[m], "Step Left");
+	AddMenuItem(MenuOptions[m], "Step Right");
+	AddMenuItem(MenuOptions[m], "Strafe");
+	AddMenuItem(MenuOptions[m], "Jump");
+	AddMenuItem(MenuOptions[m], "Run");
+	AddMenuItem(MenuOptions[m], "Crouch");
+	AddMenuItem(MenuOptions[m], "Lure Call");
+	AddMenuItem(MenuOptions[m], "Binoculars");
+	AddMenuItem(MenuOptions[m], "Call Resupply");
+	AddMenuItem(MenuOptions[m], "Invert Mouse");
+	//AddMenuItem(MenuOptions[m], "Mouse sensitivity");
+	MenuOptions[m].Rect = { 610 - 140, 85, 610 + 140, 85 + (MenuOptions[1].Count * 25) };
+
+	m = OPT_VIDEO;
+	MenuOptions[m].x0 = 70;
+	MenuOptions[m].y0 = 360;
+	MenuOptions[m].Count = 0;
+	AddMenuItem(MenuOptions[m], "Resolution");
+	AddMenuItem(MenuOptions[m], "Fog");
+	AddMenuItem(MenuOptions[m], "Textures");
+	AddMenuItem(MenuOptions[m], "Shadows");
+	AddMenuItem(MenuOptions[m], "ColorKey");
+	MenuOptions[m].Rect = { 190 - 140, 360, 190 + 140, 360 + (MenuOptions[2].Count * 25) };
+
+	UINT prev_align = SetTextAlign(hdcCMain, TA_BASELINE);
+	SetTextAlign(hdcCMain, prev_align);
+	std::cout << "TextAlign default=" << prev_align << std::endl;
 }
 
 
@@ -186,6 +270,10 @@ void DrawPicture(int x, int y, Picture& pic)
 	if (pic.m_Data == nullptr || pic.m_Width == 0 || pic.m_Height == 0)
 		return;
 
+	/*for (int y = 0; y < 600; y++) {
+		memcpy((uint16_t*)lpVideoBuf + (y * 800), &menu.m_Image[(600 - y - 1) * 800], 800 * 2);
+	}*/
+
 	for (int i = 0; i < pic.m_Height; i++) {
 		memcpy((uint16_t*)lpVideoBuf + x + (y + i) * 800, pic.m_Data + (pic.m_Height - i - 1) * pic.m_Width, pic.m_Width * 2);
 	}
@@ -199,36 +287,84 @@ void DrawPicture(int x, int y, int w, int h, uint16_t* lpImage)
 }
 
 
-void DrawMenuItem(MenuItem& menu)
+/*
+Draw the menu background and overlay the 'on' layer
+*/
+void DrawMenuBg(MenuItem& menu)
 {
 	POINT& p = g_CursorPos;
 	uint8_t cursor_id = 0;
 
-	cursor_id = menu.m_Image_Map[(p.x / 2) + (p.y / 2) * 400];
+	cursor_id = menu.GetID((p.x / 2), (p.y / 2));
 
-	for (int y = 0; y < 600; y++) {
+	// OLD: Render background image
+	/*for (int y = 0; y < 600; y++) {
 		memcpy((uint16_t*)lpVideoBuf + (y * 800), &menu.m_Image[(600 - y - 1) * 800], 800 * 2);
-	}
+	}*/
 
-	if (cursor_id == 0)
-		return;
+	// Render the base background from the on/off states
+	for (int yy = 0; yy < 300; yy++) {
+		for (int xx = 0; xx < 400; xx++)
+		{
+			int x = xx * 2;
+			int y = yy * 2;
+			int on = false;
+			uint8_t id2 = menu.GetID((xx), (yy));
 
-	for (int y = 0; y < 600; y++) {
-		for (int x = 0; x < 800; x++) {
-			uint8_t id2 = menu.m_Image_Map[(x / 2) + (y / 2) * 400];
-			if (cursor_id == id2) {
-				*((uint16_t*)lpVideoBuf + (x + y * 800)) = menu.m_Image_On[x + (600 - y - 1) * 800];
+			if (cursor_id == id2) on |= true;
+
+			if (g_MenuState == MENU_HUNT && (id2 >= 1 && id2 <= 6)) {
+				on |= (int)g_MenuItem.GetIsElementSet(id2);
+			}
+			else if (g_MenuState == MENU_OPTIONS && (id2 >= 1 && id2 <= 3)) {
+				on |= (int)g_MenuItem.GetIsElementSet(id2);
+			}
+
+			if (id2 == 0) on = false;
+
+			if (on) {
+				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 0) * 800)) = menu.m_Image_On[(x + 0) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1) + (y + 0) * 800)) = menu.m_Image_On[(x + 1) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 1) * 800)) = menu.m_Image_On[(x + 0) + (600 - (y + 1) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1) + (y + 1) * 800)) = menu.m_Image_On[(x + 1) + (600 - (y + 1) - 1) * 800];
+			}
+			else {
+				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 0) * 800)) = menu.m_Image[(x + 0) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1) + (y + 0) * 800)) = menu.m_Image[(x + 1) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 1) * 800)) = menu.m_Image[(x + 0) + (600 - (y + 1) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1) + (y + 1) * 800)) = menu.m_Image[(x + 1) + (600 - (y + 1) - 1) * 800];
 			}
 		}
 	}
 }
 
 
-void DrawTextGDI(int x, int y, const std::string& text, uint32_t color)
+void DrawTextColor(int x, int y, const std::string& text, uint32_t color, int align = DTA_LEFT)
 {
+	if (align != DTA_LEFT)
+		SetTextAlign(hdcCMain, TA_BASELINE);
+
 	SetBkMode(hdcCMain, TRANSPARENT);
 	SetTextColor(hdcCMain, color);
-	TextOut(hdcCMain, x, y, text.c_str(), text.size());
+	TextOut(hdcCMain, x, y, text.c_str(), (int)text.size());
+
+	if (align != DTA_LEFT)
+		SetTextAlign(hdcCMain, 0);
+}
+
+
+void DrawTextShadow(int x, int y, const std::string& text, uint32_t color, int align = DTA_LEFT)
+{
+	if (align != DTA_LEFT)
+		SetTextAlign(hdcCMain, TA_BASELINE);
+
+	DrawTextColor(x + 1, y + 1, text, RGB(0, 0, 0));
+	DrawTextColor(x + 1, y, text, RGB(0, 0, 0));
+	DrawTextColor(x, y + 1, text, RGB(0, 0, 0));
+	DrawTextColor(x, y, text, color);
+
+	if (align != DTA_LEFT)
+		SetTextAlign(hdcCMain, 0);
 }
 
 
@@ -254,61 +390,49 @@ void InterfaceClear(WORD Color)
 void InterfaceBlt()
 {
 	BitBlt(hdcMain, 0, 0, 800, 600, hdcCMain, 0, 0, SRCCOPY);
-
 	SelectObject(hdcCMain, hfntOld);
 	SelectObject(hdcCMain, hbmpOld);
 }
 
 
-void InitGameMenu()
+void MenuEventStart(int32_t menu_state)
 {
-	g_ProfileIndex = 0;
+	g_MenuItem.ResetElementSet();
 
-	MenuOptions[0].x0 = 70;
-	MenuOptions[0].y0 = 85;
-	MenuOptions[0].Count = 0;
-	AddMenuItem(MenuOptions[0], "Agressivity");
-	AddMenuItem(MenuOptions[0], "Density");
-	AddMenuItem(MenuOptions[0], "Sensitivity");
-	AddMenuItem(MenuOptions[0], "Measurement");
-	AddMenuItem(MenuOptions[0], "Render");
-	AddMenuItem(MenuOptions[0], "Audio");
+	switch (menu_state) {
+	case MENU_REGISTER: {
+		char tname[128];
+		for (int i = 0; i < 6; i++) {
+			g_Profiles[i].m_Name = "";
+			g_Profiles[i].m_RegNumber = i;
+			g_Profiles[i].m_Rank = 0;
+			g_Profiles[i].m_Score = 0;
 
-	MenuOptions[1].x0 = 610;
-	MenuOptions[1].y0 = 85;
-	MenuOptions[1].Count = 0;
-	AddMenuItem(MenuOptions[1], "Forward");
-	AddMenuItem(MenuOptions[1], "Backward");
-	AddMenuItem(MenuOptions[1], "Turn Up");
-	AddMenuItem(MenuOptions[1], "Turn Down");
-	AddMenuItem(MenuOptions[1], "Turn Left");
-	AddMenuItem(MenuOptions[1], "Turn Right");
-	AddMenuItem(MenuOptions[1], "Fire");
-	AddMenuItem(MenuOptions[1], "Draw Weapon");
-	AddMenuItem(MenuOptions[1], "Step Left");
-	AddMenuItem(MenuOptions[1], "Step Right");
-	AddMenuItem(MenuOptions[1], "Strafe");
-	AddMenuItem(MenuOptions[1], "Jump");
-	AddMenuItem(MenuOptions[1], "Run");
-	AddMenuItem(MenuOptions[1], "Crouch");
-	AddMenuItem(MenuOptions[1], "Lure Call");
-	AddMenuItem(MenuOptions[1], "Binoculars");
-	AddMenuItem(MenuOptions[1], "Call Resupply");
-	AddMenuItem(MenuOptions[1], "Invert Mouse");
-	//AddMenuItem(MenuOptions[1], "Mouse sensitivity");
+			std::stringstream sn;
+			sn << "trophy" << std::setfill('0') << std::setw(2) << i << ".sav";
 
-	MenuOptions[2].x0 = 70;
-	MenuOptions[2].y0 = 360;
-	MenuOptions[2].Count = 0;
-	AddMenuItem(MenuOptions[2], "Resolution");
-	AddMenuItem(MenuOptions[2], "Fog");
-	AddMenuItem(MenuOptions[2], "Textures");
-	AddMenuItem(MenuOptions[2], "Shadows");
-	AddMenuItem(MenuOptions[2], "ColorKey");
+			std::ifstream fs(sn.str());
+			if (!fs.is_open()) { continue; }
+
+			fs.read(tname, 128);
+			fs.read((char*)&g_Profiles[i].m_RegNumber, 4);
+			fs.read((char*)&g_Profiles[i].m_Score, 4);
+			fs.read((char*)&g_Profiles[i].m_Rank, 4);
+
+			g_Profiles[i].m_Name = tname;
+		}
+	} break;
+	case MENU_OPTIONS: {
+		for (int m = 0; m < OPT_MAX; m++) {
+			MenuOptions[m].Hilite = -1;
+			MenuOptions[m].Selected = -1;
+		}
+	} break;
+	}
 }
 
 
-void LoadGameMenu(unsigned int menu)
+void LoadGameMenu(int32_t menu)
 {
 	std::string	mf_off = "";
 	std::string	mf_on = "";
@@ -365,7 +489,6 @@ void LoadGameMenu(unsigned int menu)
 
 	TargaImage tga;
 
-
 	if (ReadTGAFile(mf_off, tga)) {
 		memcpy(g_MenuItem.m_Image, tga.m_Data, (800 * 2) * 600);
 	}
@@ -392,15 +515,6 @@ void LoadGameMenu(unsigned int menu)
 	else {
 		memset(g_MenuItem.m_Image_Map, 0, 400 * 300);
 	}
-}
-
-
-void DrawTextShadow(int x, int y, const std::string& text, uint32_t color)
-{
-	DrawTextGDI(x + 1, y + 1, text, RGB(0, 0, 0));
-	DrawTextGDI(x + 1, y, text, RGB(0, 0, 0));
-	DrawTextGDI(x, y + 1, text, RGB(0, 0, 0));
-	DrawTextGDI(x, y, text, color);
 }
 
 
@@ -534,19 +648,19 @@ void DrawHuntMenu()
 
 	InterfaceSetFont(fnt_Midd);
 	DrawTextShadow(424, 96, "<Summary>", RGB(239, 228, 176));
-	
+
 
 	InterfaceSetFont(fnt_Small);
 
-	for (size_t i = 0; i < g_AreaInfo.size(); i++) {
+	for (unsigned i = 0; i < g_AreaInfo.size(); i++) {
 		DrawTextShadow(14, 382 + (16 * i), g_AreaInfo[i].m_Name, 0xB0B070);
 	}
 
-	for (size_t i = 0; i < g_DinoInfo.size(); i++) {
+	for (unsigned i = 0; i < g_DinoInfo.size(); i++) {
 		DrawTextShadow(214, 382 + (16 * i), g_DinoInfo[i].m_Name, 0xB0B070);
 	}
 
-	for (size_t i = 0; i < g_WeapInfo.size(); i++) {
+	for (unsigned i = 0; i < g_WeapInfo.size(); i++) {
 		DrawTextShadow(414, 382 + (16 * i), g_WeapInfo[i].m_Name, 0xB0B070);
 	}
 }
@@ -597,15 +711,190 @@ void DrawRegistryMenu(POINT& p)
 }
 
 
-void MenuEventClickOptions(int id)
+/*
+Keyboard and Mouse handling for menus
+NOTE: Could move these to individual functions if a state machine is confusing
+*/
+void MenuEventInput(int32_t menu)
 {
+	POINT& p = g_CursorPos;
+	uint8_t id = g_MenuItem.GetID(g_CursorPos.x / 2, g_CursorPos.y / 2);
 
+#ifdef _DEBUG
+	if (g_KeyboardState[VK_RETURN] & 128) {
+		std::cout << "MenuLeftClick: " << ((int)id) << std::endl;
+	}
+#endif
+
+	if (menu == MENU_CREDITS)
+	{
+		if (g_KeyboardState[VK_RETURN] & 128) {
+			g_KeyboardState[VK_LBUTTON] |= 128;
+		}
+
+		if (g_KeyboardState[VK_SPACE] & 128) {
+			g_KeyboardState[VK_LBUTTON] |= 128;
+		}
+
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			WaitForMouseRelease();
+			ChangeMenuState(MENU_MAIN);
+		}
+	}
+	else if (menu == MENU_REGISTER)
+	{
+		if (g_KeyboardState[VK_RETURN] & 128) {
+			g_KeyboardState[VK_LBUTTON] |= 128;
+			id = 1;
+		}
+
+		if (g_KeyboardState[VK_DELETE] & 128) {
+			g_KeyboardState[VK_LBUTTON] |= 128;
+			id = 2;
+		}
+
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			if (id == 1) {
+				if (g_Profiles[g_ProfileIndex].m_Name.empty()) {
+					g_UserProfile.New(g_TypingBuffer);
+					g_Options.Default();
+					SaveTrophy(g_UserProfile);
+				}
+				else {
+					LoadTrophy(g_UserProfile, g_ProfileIndex);
+				}
+
+				WaitForMouseRelease();
+				ChangeMenuState(MENU_MAIN);
+			}
+			else if (id == 2) {
+				// Delete the selected 'save'
+				//DeleteFile();
+				WaitForMouseRelease();
+			}
+			else {
+				WaitForMouseRelease();
+				g_ProfileIndex = g_HiliteProfileIndex;
+			}
+		}
+	}
+	else if (menu == MENU_OPTIONS) {
+		if (g_KeyboardState[VK_ESCAPE] & 128) {
+			ChangeMenuState(MENU_QUIT);
+		}
+		else if (id == 4) {
+			if (g_KeyboardState[VK_LBUTTON] & 128) {
+				WaitForMouseRelease();
+				ChangeMenuState(MENU_MAIN);
+			}
+		}
+		else
+		{
+			for (int m = 0; m < OPT_MAX; m++)
+			{
+				MenuSet& mo = MenuOptions[m];
+				if (p.x > mo.Rect.left && p.y > mo.Rect.top && p.x < mo.Rect.right && p.y < mo.Rect.bottom)
+				{
+					int yd = p.y - mo.y0;
+					g_MenuItem.SetIsElementSet(m + 1, true);
+
+					if (yd > 0)
+					{
+						mo.Hilite = yd / 25;
+					}
+					else mo.Hilite = -1;
+
+					if (g_KeyboardState[VK_LBUTTON] & 128)
+					{
+						WaitForMouseRelease();
+
+						if (m == OPT_GAME) {
+							//click
+							mo.Selected = mo.Hilite;
+						}
+						if (m == OPT_KEYBINDINGS) {
+							//click
+							mo.Selected = mo.Hilite;
+						}
+						if (m == OPT_VIDEO) {
+							//click
+							mo.Selected = mo.Hilite;
+						}
+					}
+				}
+				else
+				{
+					g_MenuItem.SetIsElementSet(m + 1, false);
+					mo.Hilite = -1;
+				}
+			}
+		}
+	}
+	else if (menu == MENU_HUNT) {
+		if (g_KeyboardState[VK_ESCAPE] & 128) {
+			ChangeMenuState(MENU_QUIT);
+		}
+
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			if (id >= 1 && id <= 6) {
+				WaitForMouseRelease();
+				g_MenuItem.ToggleIsElementSet(id);
+			}
+			else if (id == 7) // Back
+			{
+				WaitForMouseRelease();
+				ChangeMenuState(MENU_MAIN);
+			}
+			else if (id == 8) // Hunt/Next
+			{
+				// Launch the game
+				WaitForMouseRelease();
+				//LaunchProcess("", "");
+			}
+		}
+	}
+	else if (menu == MENU_MAIN)
+	{
+		if (g_KeyboardState[VK_ESCAPE] & 128) {
+			ChangeMenuState(MENU_QUIT);
+		}
+		else if (g_KeyboardState[VK_LBUTTON] & 128) {
+			WaitForMouseRelease();
+			if (id == 1) { WaitForMouseRelease(); ChangeMenuState(MENU_HUNT); }
+			else if (id == 2) { WaitForMouseRelease(); ChangeMenuState(MENU_OPTIONS); }
+			else if (id == 3) { WaitForMouseRelease(); /*LaunchProcess("", "");*/ }
+			else if (id == 4) { WaitForMouseRelease(); ChangeMenuState(MENU_CREDITS); }
+			else if (id == 5) { WaitForMouseRelease(); ChangeMenuState(MENU_QUIT); }
+			else if (id == 6) { WaitForMouseRelease(); ChangeMenuState(MENU_STATISTICS); }
+		}
+	}
+	else if (menu == MENU_STATISTICS)
+	{
+		if (g_KeyboardState[VK_ESCAPE] & 128) {
+			ChangeMenuState(MENU_QUIT);
+		}
+
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			WaitForMouseRelease();
+			ChangeMenuState(MENU_MAIN);
+		}
+	}
+	else if (menu == MENU_QUIT)
+	{
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			WaitForMouseRelease();
+			if (id == 1)      PostQuitMessage(0);
+			else if (id == 2) ChangeMenuState(MENU_MAIN);
+		}
+	}
 }
 
 
 void DrawOptionsMenu()
 {
-	int c = RGB(239, 228, 176);
+	const int off_c = RGB(239, 228, 176);
+	const int on_c = RGB(30, 239, 30);
+	int c = off_c;
 
 	InterfaceSetFont(fnt_Big);
 
@@ -613,6 +902,10 @@ void DrawOptionsMenu()
 	for (int i = 0; i < MenuOptions[OPT_GAME].Count; i++) {
 		int x0 = MenuOptions[OPT_GAME].x0;
 		int y0 = MenuOptions[OPT_GAME].y0 + (25 * i);
+
+		if (MenuOptions[OPT_GAME].Hilite == i) c = on_c;
+		else c = off_c;
+		if (MenuOptions[OPT_GAME].Selected == i) c = RGB(100, 100, 239);
 
 		DrawTextShadow(x0, y0, MenuOptions[OPT_GAME].Item[i], c);
 	}
@@ -626,6 +919,10 @@ void DrawOptionsMenu()
 
 		ss << KeyNames[MapVKKey(*((int32_t*)&g_Options.KeyMap + i))];
 
+		if (MenuOptions[OPT_KEYBINDINGS].Hilite == i) c = on_c;
+		else c = off_c;
+		if (MenuOptions[OPT_KEYBINDINGS].Selected == i) c = RGB(100, 100, 239);
+
 		//DrawTextShadow(x0 - (GetTextW(hdcCMain, MenuOptions[m].Item[i]) + 5), y0, MenuOptions[m].Item[i], c);
 		DrawTextShadow(x0 - 160, y0, MenuOptions[OPT_KEYBINDINGS].Item[i], c);
 		DrawTextShadow(x0 + 5, y0, ss.str(), c);
@@ -635,6 +932,10 @@ void DrawOptionsMenu()
 	for (int i = 0; i < MenuOptions[OPT_VIDEO].Count; i++) {
 		int x0 = MenuOptions[OPT_VIDEO].x0;
 		int y0 = MenuOptions[OPT_VIDEO].y0 + (25 * i);
+
+		if (MenuOptions[OPT_VIDEO].Hilite == i) c = on_c;
+		else c = off_c;
+		if (MenuOptions[OPT_VIDEO].Selected == i) c = RGB(100, 100, 239);
 
 		DrawTextShadow(x0, y0, MenuOptions[OPT_VIDEO].Item[i], c);
 	}
@@ -668,6 +969,7 @@ void ProcessMenu()
 	if (g_CursorPos.x >= 800) g_CursorPos.x = 800 - 1;
 	if (g_CursorPos.y >= 600) g_CursorPos.y = 600 - 1;
 
+	// Get the keyboard state
 	if (GetActiveWindow() == hwndMain) {
 		GetKeyboardState(g_KeyboardState);
 	}
@@ -675,73 +977,33 @@ void ProcessMenu()
 		memset(g_KeyboardState, 0, 256);
 	}
 
-	/* Original:
-	if (p.x >= 0 && p.y >= 0 && p.x < 800 && p.y < 600)
-		id = g_MenuItem.Image_Map[(p.x / 2) + (p.y / 2) * 400];
-	else
-		id = 0;*/
+	// Trigger the Start() event of the menu if applicable
+	if (g_PrevMenuState != g_MenuState) {
+		MenuEventStart(g_MenuState);
+		g_PrevMenuState = g_MenuState;
+	}
 
-	InterfaceClear(HIRGB(0, 0, 0));
+	// Handle input from mouse/keyboard
+	MenuEventInput(g_MenuState);
 
-	//DrawRectangle(0,0, 64,64, 31);
-	DrawMenuItem(g_MenuItem);
+	// Clear the video buffer and then draw the menu background
+	InterfaceClear(HIRGB(0, 0, 10));
+	DrawMenuBg(g_MenuItem);
 
+	// Draw menus
 	switch (g_MenuState)
 	{
-	case MENU_REGISTER: {
-		if (g_PrevMenuState != g_MenuState) {
-			char tname[128];
-			for (int i = 0; i < 6; i++) {
-				g_Profiles[i].m_Name = "";
-				g_Profiles[i].m_RegNumber = i;
-				g_Profiles[i].m_Rank = 0;
-				g_Profiles[i].m_Score = 0;
-
-				std::stringstream sn;
-				sn << "trophy" << std::setfill('0') << std::setw(2) << i << ".sav";
-
-				std::ifstream fs(sn.str());
-				if (!fs.is_open()) { continue; }
-
-				fs.read(tname, 128);
-				fs.read((char*)&g_Profiles[i].m_RegNumber, 4);
-				fs.read((char*)&g_Profiles[i].m_Score, 4);
-				fs.read((char*)&g_Profiles[i].m_Rank, 4);
-
-				g_Profiles[i].m_Name = tname;
-			}
-		}
-
-		DrawRegistryMenu(g_CursorPos);
-	} break;
-	case MENU_MAIN: {
-		if (g_PrevMenuState != g_MenuState) {/* Menu Init */}
-		DrawProfileMenu();
-	} break;
-	case MENU_STATISTICS: {
-		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
-		DrawStatisticsMenu();
-	} break;
-	case MENU_QUIT: {
-		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
-		DrawProfileMenu();
-	} break;
-	case MENU_OPTIONS: {
-		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
-		DrawOptionsMenu();
-	} break;
-	case MENU_CREDITS: {
-		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
-		// -- do rendering
-	} break;
-	case MENU_HUNT: {
-		if (g_PrevMenuState != g_MenuState) {/* Menu Init */ }
-		DrawHuntMenu();
-	} break;
+	case MENU_REGISTER: DrawRegistryMenu(g_CursorPos); break;
+	case MENU_MAIN: DrawProfileMenu(); break;
+	case MENU_STATISTICS: DrawStatisticsMenu(); break;
+	case MENU_QUIT: DrawProfileMenu(); break;
+	case MENU_OPTIONS: DrawOptionsMenu(); break;
+	case MENU_CREDITS: /* do rendering */ break;
+	case MENU_HUNT: DrawHuntMenu(); break;
 	}
 
 #ifdef _DEBUG
-	// Perform some framerate metric stuff, only for Debug builds though
+	// Perform some framerate metric stuff, only for [Debug] builds though
 	g_Frames++;
 
 	int64_t t = Timer::GetTime();
@@ -749,11 +1011,15 @@ void ProcessMenu()
 
 	std::stringstream ss;
 	ss << "FPS: " << g_FramesPerSecond;
-	DrawTextShadow(2, 2, ss.str(), RGB(255, 20, 20));
+	DrawTextShadow(2, 2, ss.str(), RGB(255, 60, 60));
 	ss.str(""); ss.clear();
 
-	ss << "FrameTime: " << t_diff << "ms";
-	DrawTextShadow(2, 2 + 16, ss.str(), RGB(255, 20, 20));
+	ss << "FT:  " << t_diff << "ms";
+	DrawTextShadow(2, 2 + 14, ss.str(), RGB(255, 60, 60));
+	ss.str(""); ss.clear();
+
+	ss << "XY:  " << g_CursorPos.x << "x" << g_CursorPos.y;
+	DrawTextShadow(2, 2 + 28, ss.str(), RGB(255, 60, 60));
 
 	if (t_diff < FRAME_TIME_DELTA) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(FRAME_TIME_DELTA - t_diff));
@@ -766,7 +1032,7 @@ void ProcessMenu()
 	}
 
 	g_PrevFrameTime = Timer::GetTime();
-#else // Release frame limiter
+#else // [Release] build frame limiter
 
 	int64_t t = Timer::GetTime();
 	int64_t t_diff = t - g_PrevFrameTime;
@@ -781,31 +1047,7 @@ void ProcessMenu()
 	// Draw the GDI buffer to the window
 	InterfaceBlt();
 
-	g_PrevMenuState = g_MenuState;
-}
-
-
-void MenuKeyDownEvent(uint16_t keycode)
-{
-	if (g_MenuState == MENU_CREDITS) {
-		ChangeMenuState(MENU_MAIN);
-		LoadGameMenu(g_MenuState);
-		return;
-	}
-	else if (g_MenuState == MENU_REGISTER) {
-		if (keycode == VK_RETURN)
-		{
-			// -- Create new save profile
-			//SaveTrophy();
-		}
-		return;
-	}
-
-	if (keycode == VK_ESCAPE) {
-		ChangeMenuState(MENU_QUIT);
-		LoadGameMenu(g_MenuState);
-		return;
-	}
+	//g_PrevMenuState = g_MenuState;
 }
 
 
@@ -826,82 +1068,3 @@ void MenuKeyCharEvent(uint16_t wParam)
 	}
 }
 
-
-void MenuMouseLEvent()
-{
-	POINT p;
-	GetCursorPos(&p);
-	ScreenToClient(hwndMain, &p);
-
-	if (p.x < 0) return;
-	if (p.y < 0) return;
-	if (p.x > 799) return;
-	if (p.y > 599) return;
-
-	uint8_t id = g_MenuItem.GetID(p.x / 2, p.y / 2);
-
-	switch (g_MenuState)
-	{
-	case MENU_REGISTER: {
-		if (id == 1) {
-			if (g_Profiles[g_ProfileIndex].m_Name.empty()) {
-				g_UserProfile.New(g_TypingBuffer);
-				g_Options.Default();
-				SaveTrophy(g_UserProfile);
-			}
-			else {
-				LoadTrophy(g_UserProfile, g_ProfileIndex);
-			}
-
-			ChangeMenuState(MENU_MAIN);
-		}
-		else if (id == 2) {
-			// Delete the selected 'save'
-		}
-		else {
-			g_ProfileIndex = g_HiliteProfileIndex;
-		}
-	} break;
-	case MENU_MAIN: {
-		if (id == 1)      ChangeMenuState(MENU_HUNT);
-		else if (id == 2) ChangeMenuState(MENU_OPTIONS);
-		else if (id == 3) { /*LaunchProcess("", "");*/ }
-		else if (id == 4) ChangeMenuState(MENU_CREDITS);
-		else if (id == 5) ChangeMenuState(MENU_QUIT);
-		else if (id == 6) ChangeMenuState(MENU_STATISTICS);
-	} break;
-	case MENU_STATISTICS: {
-		ChangeMenuState(MENU_MAIN);
-	} break;
-	case MENU_QUIT: {
-		if (id == 1)      PostQuitMessage(0);
-		else if (id == 2) ChangeMenuState(MENU_MAIN);
-	} break;
-	case MENU_OPTIONS: {
-		if (id == 4) ChangeMenuState(MENU_MAIN);
-		else MenuEventClickOptions(id);
-	} break;
-	case MENU_CREDITS: {
-		ChangeMenuState(MENU_MAIN);
-	} break;
-	case MENU_HUNT: {
-		if (id == 7) {
-			ChangeMenuState(MENU_MAIN);
-		}
-		else if (id == 8) {
-			// Launch the game
-		}
-	} break;
-	default: // If there are no cases for this, then print the id to std::cout
-		if (id != 0) {
-			std::cout << "MenuLeftClick: " << ((int)id) << std::endl;
-		}
-		break;
-	}
-
-#ifdef _DEBUG
-	std::cout << "MenuLeftClick: " << ((int)id) << std::endl;
-#endif
-
-	LoadGameMenu(g_MenuState);
-}

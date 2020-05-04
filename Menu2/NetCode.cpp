@@ -95,7 +95,7 @@ void NetworkPost(LPSTR url, LPSTR host, LPSTR data)
 		return;
 	}
 
-	send(Socket, packet.str().c_str(), packet.str().length(), 0);
+	send(Socket, packet.str().c_str(), (int)packet.str().length(), 0);
 
 	while (true)
 	{
@@ -156,7 +156,7 @@ void NetworkGet(LPSTR url, LPSTR host, LPSTR data)
 		return;
 	}
 
-	send(Socket, packet.str().c_str(), packet.str().length(), 0);
+	send(Socket, packet.str().c_str(), (int)packet.str().length(), 0);
 
 	while (true)
 	{
