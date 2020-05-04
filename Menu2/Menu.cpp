@@ -32,6 +32,8 @@ public:
 		Hilite(-1),
 		Rect({ 0,0,0,0 })
 	{}
+
+	void AddItem(const std::string& txt);
 };
 
 
@@ -54,13 +56,17 @@ enum DrawTextAlignEnum {
 
 
 MenuSet MenuOptions[3];
+MenuSet MenuRegistry;
 
 void* lpVideoBuf;
 HDC hdcCMain;
 HBITMAP bmpMain;
 HBITMAP hbmpOld;
 HFONT hfntOld;
+
 POINT g_CursorPos;
+int g_WaitKey = -1;
+BOOL g_KeyboardUsed = false;
 
 
 // String table
@@ -73,6 +79,39 @@ void WaitForMouseRelease()
 	while (GetAsyncKeyState(VK_RBUTTON) & 0x80000000);
 	while (GetAsyncKeyState(VK_MBUTTON) & 0x80000000);
 	while (GetAsyncKeyState(VK_LBUTTON) & 0x80000000);
+}
+
+
+void AcceptNewKey()
+{
+	uint8_t keystate[256];
+
+	if (GetKeyboardState(keystate)) {
+
+		if (keystate[VK_ESCAPE] & 128)
+		{
+			*((uint32_t*)(&g_Options.KeyMap) + g_WaitKey) = 0;
+		}
+		else
+		{
+			for (int k = 0; k < 255; k++)
+			{
+				if (keystate[k] & 128)
+				{
+					for (int t = 0; t < 16; t++)
+						if (*((uint32_t*)(&g_Options.KeyMap) + t) == k)
+							*((uint32_t*)(&g_Options.KeyMap) + t) = 0;
+
+					*((int*)(&g_Options.KeyMap) + g_WaitKey) = k;
+					WaitForMouseRelease();
+					g_WaitKey = -1;
+					return;
+				}
+			}
+		}
+	}
+
+	//g_WaitKey = -1;
 }
 
 
@@ -106,11 +145,11 @@ int MapVKKey(int k)
 }
 
 
-void AddMenuItem(MenuSet& ms, const std::string& txt)
+void MenuSet::AddItem(const std::string& txt)
 {
-	ms.Item[ms.Count] = txt;
+	this->Item[this->Count] = txt;
 	//ms.y0 = ms.y0 + (ms.Count * 25);
-	ms.Count++;
+	this->Count++;
 }
 
 
@@ -119,6 +158,7 @@ Initialise all the required settings and interface elements
 */
 void InitInterface()
 {
+	std::cout << "Initialising Menu Interface..." << std::endl;
 	fnt_Big = CreateFont(
 		23, 10, 0, 0,
 		600, 0, 0, 0,
@@ -181,40 +221,46 @@ void InitInterface()
 
 	g_ProfileIndex = 0;
 
+	MenuRegistry.x0 = 360;
+	MenuRegistry.y0 = 363;
+	//MenuEventStart(MENU_REGISTER) contains the AddMenuItem() calls
+
+	MenuRegistry.Rect = { 360, 363, 499, 491 }; // Enough room for 9.14 items with fnt_Small
+
 	int m = OPT_GAME;
 	MenuOptions[m].x0 = 70;
 	MenuOptions[m].y0 = 85;
 	MenuOptions[m].Count = 0;
-	AddMenuItem(MenuOptions[m], "Agressivity");
-	AddMenuItem(MenuOptions[m], "Density");
-	AddMenuItem(MenuOptions[m], "Sensitivity");
-	AddMenuItem(MenuOptions[m], "Measurement");
-	AddMenuItem(MenuOptions[m], "Render");
-	AddMenuItem(MenuOptions[m], "Audio");
+	MenuOptions[m].AddItem("Agressivity");
+	MenuOptions[m].AddItem("Density");
+	MenuOptions[m].AddItem("Sensitivity");
+	MenuOptions[m].AddItem("Measurement");
+	MenuOptions[m].AddItem("Render");
+	MenuOptions[m].AddItem("Audio");
 	MenuOptions[m].Rect = { 190 - 140, 85, 190 + 140, 85 + (MenuOptions[0].Count * 25) };
 
 	m = OPT_KEYBINDINGS;
 	MenuOptions[m].x0 = 610;
 	MenuOptions[m].y0 = 85;
 	MenuOptions[m].Count = 0;
-	AddMenuItem(MenuOptions[m], "Forward");
-	AddMenuItem(MenuOptions[m], "Backward");
-	AddMenuItem(MenuOptions[m], "Turn Up");
-	AddMenuItem(MenuOptions[m], "Turn Down");
-	AddMenuItem(MenuOptions[m], "Turn Left");
-	AddMenuItem(MenuOptions[m], "Turn Right");
-	AddMenuItem(MenuOptions[m], "Fire");
-	AddMenuItem(MenuOptions[m], "Draw Weapon");
-	AddMenuItem(MenuOptions[m], "Step Left");
-	AddMenuItem(MenuOptions[m], "Step Right");
-	AddMenuItem(MenuOptions[m], "Strafe");
-	AddMenuItem(MenuOptions[m], "Jump");
-	AddMenuItem(MenuOptions[m], "Run");
-	AddMenuItem(MenuOptions[m], "Crouch");
-	AddMenuItem(MenuOptions[m], "Lure Call");
-	AddMenuItem(MenuOptions[m], "Binoculars");
-	AddMenuItem(MenuOptions[m], "Call Resupply");
-	AddMenuItem(MenuOptions[m], "Invert Mouse");
+	MenuOptions[m].AddItem("Forward");
+	MenuOptions[m].AddItem("Backward");
+	MenuOptions[m].AddItem("Turn Up");
+	MenuOptions[m].AddItem("Turn Down");
+	MenuOptions[m].AddItem("Turn Left");
+	MenuOptions[m].AddItem("Turn Right");
+	MenuOptions[m].AddItem("Fire");
+	MenuOptions[m].AddItem("Draw Weapon");
+	MenuOptions[m].AddItem("Step Left");
+	MenuOptions[m].AddItem("Step Right");
+	MenuOptions[m].AddItem("Strafe");
+	MenuOptions[m].AddItem("Jump");
+	MenuOptions[m].AddItem("Run");
+	MenuOptions[m].AddItem("Crouch");
+	MenuOptions[m].AddItem("Lure Call");
+	MenuOptions[m].AddItem("Binoculars");
+	MenuOptions[m].AddItem("Call Resupply");
+	MenuOptions[m].AddItem("Invert Mouse");
 	//AddMenuItem(MenuOptions[m], "Mouse sensitivity");
 	MenuOptions[m].Rect = { 610 - 140, 85, 610 + 140, 85 + (MenuOptions[1].Count * 25) };
 
@@ -222,16 +268,14 @@ void InitInterface()
 	MenuOptions[m].x0 = 70;
 	MenuOptions[m].y0 = 360;
 	MenuOptions[m].Count = 0;
-	AddMenuItem(MenuOptions[m], "Resolution");
-	AddMenuItem(MenuOptions[m], "Fog");
-	AddMenuItem(MenuOptions[m], "Textures");
-	AddMenuItem(MenuOptions[m], "Shadows");
-	AddMenuItem(MenuOptions[m], "ColorKey");
+	MenuOptions[m].AddItem("Resolution");
+	MenuOptions[m].AddItem("Fog");
+	MenuOptions[m].AddItem("Textures");
+	MenuOptions[m].AddItem("Shadows");
+	MenuOptions[m].AddItem("ColorKey");
 	MenuOptions[m].Rect = { 190 - 140, 360, 190 + 140, 360 + (MenuOptions[2].Count * 25) };
 
-	UINT prev_align = SetTextAlign(hdcCMain, TA_BASELINE);
-	SetTextAlign(hdcCMain, prev_align);
-	std::cout << "TextAlign default=" << prev_align << std::endl;
+	std::cout << "Menu Interface initialised!" << std::endl;
 }
 
 
@@ -395,12 +439,19 @@ void InterfaceBlt()
 }
 
 
+/*
+Menu screen initialization event
+NOTE: This only gets called on the first tick that the menu exists, it can be used to
+initialize variables and reset various things.
+*/
 void MenuEventStart(int32_t menu_state)
 {
 	g_MenuItem.ResetElementSet();
 
 	switch (menu_state) {
 	case MENU_REGISTER: {
+		MenuRegistry.Count = 0;
+		MenuRegistry.AddItem("");
 		char tname[128];
 		for (int i = 0; i < 6; i++) {
 			g_Profiles[i].m_Name = "";
@@ -423,6 +474,8 @@ void MenuEventStart(int32_t menu_state)
 		}
 	} break;
 	case MENU_OPTIONS: {
+		g_WaitKey = -1;
+
 		for (int m = 0; m < OPT_MAX; m++) {
 			MenuOptions[m].Hilite = -1;
 			MenuOptions[m].Selected = -1;
@@ -589,7 +642,7 @@ void DrawStatisticsMenu()
 	std::stringstream ss;
 	int c = RGB(239, 228, 176);
 
-	InterfaceSetFont(fnt_Small);
+	InterfaceSetFont(fnt_Midd);
 	//int  ttm = (int)g_UserProfile.Total.time;
 	int  ltm = (int)g_UserProfile.Last.time;
 
@@ -688,14 +741,16 @@ void DrawRegistryMenu(POINT& p)
 	// 320, 370
 	for (int i = 0; i < 6; i++)
 	{
-		color = RGB(255, 170, 10);
+		color = 0xB0B070; // Base colour
 
 		if (i == g_HiliteProfileIndex)
-			color = 0xB0B070;
+			color = RGB(255, 170, 10);
 
 		if (p.x >= 308 && p.y >= (368 + (16 * i)) && p.x <= 408 && p.y <= (368 + (16 * i) + 16)) {
 			g_HiliteProfileIndex = i; //temporary, move to another function for user input
-			color = RGB(255, 42, 42);
+#ifdef _DEBUG
+			color = RGB(42, 255, 42);
+#endif
 		}
 
 		std::string tname = g_Profiles[i].m_Name;
@@ -704,7 +759,7 @@ void DrawRegistryMenu(POINT& p)
 			tname = "...";
 		}
 
-		DrawTextShadow(320, 370 + (20 * i), tname, color);
+		DrawTextShadow(320, 370 + (16 * i), tname, color);
 	}
 
 	InterfaceSetFont(NULL);
@@ -717,6 +772,8 @@ NOTE: Could move these to individual functions if a state machine is confusing
 */
 void MenuEventInput(int32_t menu)
 {
+	if (!g_KeyboardUsed) return;
+
 	POINT& p = g_CursorPos;
 	uint8_t id = g_MenuItem.GetID(g_CursorPos.x / 2, g_CursorPos.y / 2);
 
@@ -758,10 +815,10 @@ void MenuEventInput(int32_t menu)
 				if (g_Profiles[g_ProfileIndex].m_Name.empty()) {
 					g_UserProfile.New(g_TypingBuffer);
 					g_Options.Default();
-					SaveTrophy(g_UserProfile);
+					TrophySave(g_UserProfile);
 				}
 				else {
-					LoadTrophy(g_UserProfile, g_ProfileIndex);
+					TrophyLoad(g_UserProfile, g_ProfileIndex);
 				}
 
 				WaitForMouseRelease();
@@ -769,8 +826,9 @@ void MenuEventInput(int32_t menu)
 			}
 			else if (id == 2) {
 				// Delete the selected 'save'
-				//DeleteFile();
 				WaitForMouseRelease();
+				//TrophyDelete(g_ProfileIndex);
+				MenuEventStart(menu); // -- Retrigger the start event
 			}
 			else {
 				WaitForMouseRelease();
@@ -779,10 +837,16 @@ void MenuEventInput(int32_t menu)
 		}
 	}
 	else if (menu == MENU_OPTIONS) {
-		if (g_KeyboardState[VK_ESCAPE] & 128) {
+		if (g_WaitKey != -1)
+		{
+			AcceptNewKey();
+		}
+		else if (g_KeyboardState[VK_ESCAPE] & 128)
+		{
 			ChangeMenuState(MENU_QUIT);
 		}
-		else if (id == 4) {
+		else if (id == 4)
+		{
 			if (g_KeyboardState[VK_LBUTTON] & 128) {
 				WaitForMouseRelease();
 				ChangeMenuState(MENU_MAIN);
@@ -815,6 +879,7 @@ void MenuEventInput(int32_t menu)
 						if (m == OPT_KEYBINDINGS) {
 							//click
 							mo.Selected = mo.Hilite;
+							g_WaitKey = mo.Hilite;
 						}
 						if (m == OPT_VIDEO) {
 							//click
@@ -925,7 +990,8 @@ void DrawOptionsMenu()
 
 		//DrawTextShadow(x0 - (GetTextW(hdcCMain, MenuOptions[m].Item[i]) + 5), y0, MenuOptions[m].Item[i], c);
 		DrawTextShadow(x0 - 160, y0, MenuOptions[OPT_KEYBINDINGS].Item[i], c);
-		DrawTextShadow(x0 + 5, y0, ss.str(), c);
+		if (g_WaitKey == i) DrawTextShadow(x0 + 5, y0, "<?>", c);
+		else                DrawTextShadow(x0 + 5, y0, ss.str(), c);
 	}
 
 	// Video/Graphics options
@@ -971,10 +1037,11 @@ void ProcessMenu()
 
 	// Get the keyboard state
 	if (GetActiveWindow() == hwndMain) {
-		GetKeyboardState(g_KeyboardState);
+		g_KeyboardUsed = GetKeyboardState(g_KeyboardState);
 	}
 	else {
 		memset(g_KeyboardState, 0, 256);
+		g_KeyboardUsed = false;
 	}
 
 	// Trigger the Start() event of the menu if applicable

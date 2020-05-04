@@ -513,8 +513,9 @@ void ProcessMenu();
 /*** Resources ***/
 void LoadResourcesScript();
 void ReleaseResources();
-void LoadTrophy(Profile& profile, int pr);
-void SaveTrophy(Profile& profile);
+void TrophyLoad(Profile& profile, int pr);
+void TrophySave(Profile& profile);
+void TrophyDelete(uint32_t);
 bool ReadTGAFile(const std::string& path, TargaImage& tga);
 
 /*** Networking ***/

@@ -9,12 +9,13 @@
 #include "Hunt.h"
 #include "Targa.h"
 
-#include <cstdlib>
 #include <iostream>
+#include <filesystem>
 #include <iomanip>
 #include <sstream>
 #include <fstream>
 #include <string>
+#include <cstdlib>
 
 
 void ReadWeapons(FILE*);
@@ -247,7 +248,7 @@ void ReleaseResources()
 	g_AreaInfo.clear();
 }
 
-void LoadTrophy(Profile& profile, int pr)
+void TrophyLoad(Profile& profile, int pr)
 {
 	//PlayerProfile.RegNumber
 	memset(&profile, 0, sizeof(Profile));
@@ -295,7 +296,7 @@ void LoadTrophy(Profile& profile, int pr)
 }
 
 
-void SaveTrophy(Profile& profile)
+void TrophySave(Profile& profile)
 {
 	std::stringstream fname;
 	fname << "trophy" << std::setfill('0') << std::setw(2) << profile.RegNumber << ".sav";
@@ -371,6 +372,17 @@ bool ReadTGAFile(const std::string& path, TargaImage& tga)
 	fs.read((char*)tga.m_Data, size);
 
 	return true;
+}
+
+
+void TrophyDelete(uint32_t trophy_index)
+{
+	std::stringstream fname;
+	fname << "trophy" << std::setfill('0') << std::setw(2) << trophy_index << ".sav";
+	std::filesystem::path fp = std::filesystem::current_path();
+	fp /= std::filesystem::path(fname.str());
+	std::cout << "Deleting trophy: \'" << fp << "\'" << std::endl;
+	std::filesystem::remove(fp);
 }
 
 
