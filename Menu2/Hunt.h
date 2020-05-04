@@ -189,112 +189,105 @@ public:
 class Wave
 {
 public:
-	int16_t* lpData;
-	uint32_t Length;
+	int16_t* m_Data;
+	uint32_t m_Length;
+	uint32_t m_Frequency;
 
-	Wave() :
-		lpData(nullptr),
-		Length(0U)
-	{}
-
-	~Wave()
-	{
-		if (lpData)
-			delete[] lpData;
-	}
+	Wave();
+	Wave(const Wave& w);
+	~Wave();
 };
 
 
 class MenuItem
 {
 public:
-	uint16_t Image[800 * 600];
-	uint16_t Image_On[800 * 600];
-	uint8_t Image_Map[400 * 300];
+	uint16_t m_Image[800 * 600];
+	uint16_t m_Image_On[800 * 600];
+	uint8_t m_Image_Map[400 * 300];
+
+	uint8_t GetID(int x, int y) const {
+		if (x >= 400 || y >= 300)
+			throw std::out_of_range("GetID() coordinates are beyond the range of 400x300!");
+		return m_Image_Map[x + (y * 400)];
+	}
 };
 
 
-class TPicture
+class Picture
 {
 public:
-	int32_t w, h;
-	uint16_t* lpImage;
+	int32_t m_Width, m_Height;
+	uint16_t* m_Data;
 
-	TPicture() :
-		w(0),
-		h(0),
-		lpImage(nullptr)
-	{}
+	Picture();
+	Picture(const Picture& p);
+	~Picture();
 
-	~TPicture()
-	{
-		if (lpImage)
-			delete[] lpImage;
-	}
+	// TODO: Add Getters and Setters, move member variables to private
 };
 
 
 class DinoInfo
 {
 public:
-	std::string	Name; // Creature name
-	std::string	FilePath; // Character file path
-	std::string	PicturePath; // Picture file path
+	std::string	m_Name; // Creature name
+	std::string	m_FilePath; // Character file path
+	std::string	m_PicturePath; // Picture file path
 
-	int32_t Health0; // Base health
-	int32_t	AI; // AI index
+	int32_t m_Health0; // Base health
+	int32_t	m_AI; // AI index
 
-	bool DangerCall; // Dangerous lure call
+	bool m_DangerCall; // Dangerous lure call
 
-	float Mass; // Weight of creature
-	float Length; // Length of creature
-	float Radius; // Area the creature occupies (for pathing and hit detection)
-	float SmellK; // Scent Sensitivity
-	float HearK; // Audio Sensitivity
-	float LookK; // Visual Sensitivity
-	float ShDelta; // Height of ship hook from ground
-	int32_t Scale0; // Base Scale
-	int32_t ScaleA; // Scale Variation
-	int32_t BaseScore; // Base score of creature
+	float m_Mass; // Weight of creature
+	float m_Length; // Length of creature
+	float m_Radius; // Area the creature occupies (for pathing and hit detection)
+	float m_SmellK; // Scent Sensitivity
+	float m_HearK; // Audio Sensitivity
+	float m_LookK; // Visual Sensitivity
+	float m_ShDelta; // Height of ship hook from ground
+	int32_t m_Scale0; // Base Scale
+	int32_t m_ScaleA; // Scale Variation
+	int32_t m_BaseScore; // Base score of creature
 
-	TPicture CallIcon;	//<- Icon associated with this species
+	Picture m_CallIcon;	//<- Icon associated with this species
 };
 
 
 class WeapInfo
 {
 public:
-	std::string Name; //<- Weapon Name
-	std::string FilePath; //<- Weapon Character File Name
-	std::string BulletFilePath; //<- Bullet Icon File Name
+	std::string m_Name; // Weapon Name
+	std::string m_FilePath; // Weapon Character File Name
+	std::string m_BulletFilePath; // Bullet Icon File Name
 
-	float Power; // Damage Per Shot of Weapon [0.0~]
-	float Prec; // Precision of Weapon [0.0 - 1.1]
-	float Loud; // Volume of Weapon [0.0 - 1.1]
-	float Rate; // Rate Of Fire, Shots Per Second
-	float Recoil; // Force of recoil [0-9999]
-	float Optic; // Zoom of weapon when iron-sighted [1-10]
+	float m_Power; // Damage Per Shot of Weapon [0.0~]
+	float m_Prec; // Precision of Weapon [0.0 - 1.1]
+	float m_Loud; // Volume of Weapon [0.0 - 1.1]
+	float m_Rate; // Rate Of Fire, Shots Per Second
+	float m_Recoil; // Force of recoil [0-9999]
+	float m_Optic; // Zoom of weapon when iron-sighted [1-10]
 
-	int32_t Shots; // Number of Bullets Per Clip/Mag/Tube
-	int32_t Fall; // Gravity on projectile during ray tracing (used for X-Bow)
-	int32_t TraceC; // Amount of projectiles per shot
-	int32_t Reload; // Shots before reload
-	int32_t	Price;
+	int32_t m_Shots; // Number of Bullets Per Clip/Mag/Tube
+	int32_t m_Fall; // Gravity on projectile during ray tracing (used for X-Bow)
+	int32_t m_TraceC; // Amount of projectiles per shot
+	int32_t m_Reload; // Shots before reload
+	int32_t	m_Price;
 };
 
 class AreaInfo
 {
 public:
-	std::string	Name; // Area Name
-	std::string	MapPath; // MAP filename
-	std::string	RscPath;	// RSC filename
+	std::string	m_Name; // Area Name
+	std::string	m_ProjectName; // MAP & RSC filename
 
-	int Cost; // Credits cost
-	int Rank; // Rank required/recommended to play map
+	int m_Cost; // Credits cost
+	int m_Rank; // Rank required/recommended to play map
 
-	std::vector<int> DinosAvail; // A list of animal AI indexes that are available on this map.
+	std::vector<int> m_DinosAvail; // A list of animal AI indexes that are available on this map.
 
-	TPicture Thumbnail; // Preview icon/image associated with this area
+	Picture m_Thumbnail; // Preview icon/image associated with this area
 };
 
 class TKeyMap
@@ -441,6 +434,8 @@ EXTERNAL uint32_t				g_HiliteProfileIndex;
 EXTERNAL Profile				g_UserProfile;
 EXTERNAL ProfileShort			g_Profiles[10];
 EXTERNAL Options				g_Options;
+
+EXTERNAL uint8_t                g_KeyboardState[256];
 
 
 // ======================================================================= //

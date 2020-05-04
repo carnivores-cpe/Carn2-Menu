@@ -39,10 +39,15 @@ enum MenuSetEnum {
 
 MenuSet MenuOptions[3];
 void* lpVideoBuf;
-HDC		hdcCMain;
-HBITMAP	bmpMain;
+HDC hdcCMain;
+HBITMAP bmpMain;
 HBITMAP hbmpOld;
-HFONT   hfntOld;
+HFONT hfntOld;
+POINT g_CursorPos;
+
+
+const char st_Boolean[2][4] = { "Off", "On" };
+const char st_HMLText[4][8] = { "Low", "Medium", "High", "Ultra" };
 
 
 void ChangeMenuState(int32_t ms)
@@ -56,6 +61,13 @@ int GetTextW(HDC hdc, const std::string& s)
 	SIZE sz;
 	GetTextExtentPoint(hdc, s.c_str(), s.length(), &sz);
 	return sz.cx;
+}
+
+int GetTextH(HDC hdc, const std::string& s)
+{
+	SIZE sz;
+	GetTextExtentPoint(hdc, s.c_str(), s.length(), &sz);
+	return sz.cy;
 }
 
 int MapVKKey(int k)
@@ -127,8 +139,7 @@ void InitInterface()
 	binfo.bmiHeader = bmih;
 	bmpMain = CreateDIBSection(hdcMain, &binfo, DIB_RGB_COLORS, &lpVideoBuf, NULL, 0);
 
-	if (!bmpMain)
-	{
+	if (!bmpMain) {
 		throw std::runtime_error("Interface: Failed to create DIB Section!");
 		return;
 	}
@@ -170,6 +181,17 @@ void DrawRectangle(int x, int y, int w, int h, Color16 c)
 }
 
 
+void DrawPicture(int x, int y, Picture& pic)
+{
+	if (pic.m_Data == nullptr || pic.m_Width == 0 || pic.m_Height == 0)
+		return;
+
+	for (int i = 0; i < pic.m_Height; i++) {
+		memcpy((uint16_t*)lpVideoBuf + x + (y + i) * 800, pic.m_Data + (pic.m_Height - i - 1) * pic.m_Width, pic.m_Width * 2);
+	}
+}
+
+
 void DrawPicture(int x, int y, int w, int h, uint16_t* lpImage)
 {
 	for (int i = 0; i < h; i++)
@@ -179,32 +201,26 @@ void DrawPicture(int x, int y, int w, int h, uint16_t* lpImage)
 
 void DrawMenuItem(MenuItem& menu)
 {
-	uint8_t id = 0;
-	POINT p;
-	GetCursorPos(&p);
-	ScreenToClient(hwndMain, &p);
+	POINT& p = g_CursorPos;
+	uint8_t cursor_id = 0;
 
-	if (p.x >= 0 && p.y >= 0 && p.x < 800 && p.y < 600)
-		id = menu.Image_Map[(p.x / 2) + (p.y / 2) * 400];
-	else
-		id = 0;
+	cursor_id = menu.m_Image_Map[(p.x / 2) + (p.y / 2) * 400];
 
-	for (int y = 0; y < 600; y++)
-	{
-		memcpy((uint16_t*)lpVideoBuf + (y * 800), &menu.Image[(600 - y - 1) * 800], 800 * 2);
+	for (int y = 0; y < 600; y++) {
+		memcpy((uint16_t*)lpVideoBuf + (y * 800), &menu.m_Image[(600 - y - 1) * 800], 800 * 2);
 	}
 
-	if (id == 0) return;
+	if (cursor_id == 0)
+		return;
 
-	for (int y = 0; y < 600; y++)
-		for (int x = 0; x < 800; x++)
-		{
-			uint8_t id2 = menu.Image_Map[(x / 2) + (y / 2) * 400];
-			if (id == id2)
-			{
-				*((uint16_t*)lpVideoBuf + (x + y * 800)) = menu.Image_On[x + (600 - y - 1) * 800];
+	for (int y = 0; y < 600; y++) {
+		for (int x = 0; x < 800; x++) {
+			uint8_t id2 = menu.m_Image_Map[(x / 2) + (y / 2) * 400];
+			if (cursor_id == id2) {
+				*((uint16_t*)lpVideoBuf + (x + y * 800)) = menu.m_Image_On[x + (600 - y - 1) * 800];
 			}
 		}
+	}
 }
 
 
@@ -351,7 +367,7 @@ void LoadGameMenu(unsigned int menu)
 
 
 	if (ReadTGAFile(mf_off, tga)) {
-		memcpy(g_MenuItem.Image, tga.m_Data, (800 * 2) * 600);
+		memcpy(g_MenuItem.m_Image, tga.m_Data, (800 * 2) * 600);
 	}
 	else {
 		throw std::runtime_error("Failed to open the file...");
@@ -360,7 +376,7 @@ void LoadGameMenu(unsigned int menu)
 
 	if (!mf_on.empty()) {
 		if (ReadTGAFile(mf_on, tga)) {
-			memcpy(g_MenuItem.Image_On, tga.m_Data, (800 * 2) * 600);
+			memcpy(g_MenuItem.m_Image_On, tga.m_Data, (800 * 2) * 600);
 		}
 		else {
 			throw std::runtime_error("Failed to open the file...");
@@ -371,10 +387,10 @@ void LoadGameMenu(unsigned int menu)
 	if (!mf_map.empty()) {
 		std::ifstream fs(mf_map, std::ios::binary);
 		if (fs.is_open())
-			fs.read((char*)g_MenuItem.Image_Map, 400 * 300);
+			fs.read((char*)g_MenuItem.m_Image_Map, 400 * 300);
 	}
 	else {
-		memset(g_MenuItem.Image_Map, 0, 400 * 300);
+		memset(g_MenuItem.m_Image_Map, 0, 400 * 300);
 	}
 }
 
@@ -523,15 +539,15 @@ void DrawHuntMenu()
 	InterfaceSetFont(fnt_Small);
 
 	for (size_t i = 0; i < g_AreaInfo.size(); i++) {
-		DrawTextShadow(14, 382 + (16 * i), g_AreaInfo[i].Name, 0xB0B070);
+		DrawTextShadow(14, 382 + (16 * i), g_AreaInfo[i].m_Name, 0xB0B070);
 	}
 
 	for (size_t i = 0; i < g_DinoInfo.size(); i++) {
-		DrawTextShadow(214, 382 + (16 * i), g_DinoInfo[i].Name, 0xB0B070);
+		DrawTextShadow(214, 382 + (16 * i), g_DinoInfo[i].m_Name, 0xB0B070);
 	}
 
 	for (size_t i = 0; i < g_WeapInfo.size(); i++) {
-		DrawTextShadow(414, 382 + (16 * i), g_WeapInfo[i].Name, 0xB0B070);
+		DrawTextShadow(414, 382 + (16 * i), g_WeapInfo[i].m_Name, 0xB0B070);
 	}
 }
 
@@ -627,6 +643,7 @@ void DrawOptionsMenu()
 }
 
 
+// TODO: Move these to Hunt.h
 #define FPS_TARGET 60L
 #define FRAME_TIME_DELTA (1000L / FPS_TARGET) // The time in milliseconds a frame takes to process to achieve FPS_TARGET
 
@@ -642,18 +659,22 @@ Perform per-frame/tick update of the menus
 */
 void ProcessMenu()
 {
-	uint8_t id = 0;
-	POINT p;
-	GetCursorPos(&p);
-	ScreenToClient(hwndMain, &p);
+	GetCursorPos(&g_CursorPos);
+	ScreenToClient(hwndMain, &g_CursorPos);
 
 	// Restrict the virtual cursor to the client area
-	if (p.x < 0) p.x = 0;
-	if (p.y < 0) p.y = 0;
-	if (p.x > 800) p.x = 800 - 1;
-	if (p.y > 600) p.y = 600 - 1;
+	if (g_CursorPos.x < 0) g_CursorPos.x = 0;
+	if (g_CursorPos.y < 0) g_CursorPos.y = 0;
+	if (g_CursorPos.x >= 800) g_CursorPos.x = 800 - 1;
+	if (g_CursorPos.y >= 600) g_CursorPos.y = 600 - 1;
 
-	id = g_MenuItem.Image_Map[(p.x / 2) + (p.y / 2) * 400];
+	if (GetActiveWindow() == hwndMain) {
+		GetKeyboardState(g_KeyboardState);
+	}
+	else {
+		memset(g_KeyboardState, 0, 256);
+	}
+
 	/* Original:
 	if (p.x >= 0 && p.y >= 0 && p.x < 800 && p.y < 600)
 		id = g_MenuItem.Image_Map[(p.x / 2) + (p.y / 2) * 400];
@@ -691,7 +712,7 @@ void ProcessMenu()
 			}
 		}
 
-		DrawRegistryMenu(p);
+		DrawRegistryMenu(g_CursorPos);
 	} break;
 	case MENU_MAIN: {
 		if (g_PrevMenuState != g_MenuState) {/* Menu Init */}
@@ -817,7 +838,7 @@ void MenuMouseLEvent()
 	if (p.x > 799) return;
 	if (p.y > 599) return;
 
-	uint8_t id = g_MenuItem.Image_Map[(p.x / 2) + (p.y / 2) * 400];
+	uint8_t id = g_MenuItem.GetID(p.x / 2, p.y / 2);
 
 	switch (g_MenuState)
 	{
@@ -844,7 +865,7 @@ void MenuMouseLEvent()
 	case MENU_MAIN: {
 		if (id == 1)      ChangeMenuState(MENU_HUNT);
 		else if (id == 2) ChangeMenuState(MENU_OPTIONS);
-		else if (id == 3) { /*LaunchProcess("");*/ }
+		else if (id == 3) { /*LaunchProcess("", "");*/ }
 		else if (id == 4) ChangeMenuState(MENU_CREDITS);
 		else if (id == 5) ChangeMenuState(MENU_QUIT);
 		else if (id == 6) ChangeMenuState(MENU_STATISTICS);
@@ -873,13 +894,13 @@ void MenuMouseLEvent()
 	} break;
 	default: // If there are no cases for this, then print the id to std::cout
 		if (id != 0) {
-			std::cout << "MenuLClick: " << ((int)id) << std::endl;
+			std::cout << "MenuLeftClick: " << ((int)id) << std::endl;
 		}
 		break;
 	}
 
 #ifdef _DEBUG
-	std::cout << "MenuLClick: " << ((int)id) << std::endl;
+	std::cout << "MenuLeftClick: " << ((int)id) << std::endl;
 #endif
 
 	LoadGameMenu(g_MenuState);

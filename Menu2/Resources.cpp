@@ -42,31 +42,31 @@ void ReadWeapons(FILE *stream)
 				if (!value) throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "power"))  g_WeapInfo[CurW].Power = (float)atof(value);
-				if (strstr(line, "prec"))   g_WeapInfo[CurW].Prec  = (float)atof(value);
-				if (strstr(line, "loud"))   g_WeapInfo[CurW].Loud  = (float)atof(value);
-				if (strstr(line, "rate"))   g_WeapInfo[CurW].Rate  = (float)atof(value);
-				if (strstr(line, "shots"))  g_WeapInfo[CurW].Shots =        atoi(value);
-				if (strstr(line, "reload")) g_WeapInfo[CurW].Reload=        atoi(value);
-				if (strstr(line, "trace"))  g_WeapInfo[CurW].TraceC=        atoi(value)-1;
-				if (strstr(line, "optic"))  g_WeapInfo[CurW].Optic = (float)atof(value);
-				if (strstr(line, "fall"))   g_WeapInfo[CurW].Fall  =        atoi(value);
-				if (strstr(line, "price"))	g_WeapInfo[CurW].Price =        atoi(value);
+				if (strstr(line, "power"))  g_WeapInfo[CurW].m_Power = (float)atof(value);
+				if (strstr(line, "prec"))   g_WeapInfo[CurW].m_Prec  = (float)atof(value);
+				if (strstr(line, "loud"))   g_WeapInfo[CurW].m_Loud  = (float)atof(value);
+				if (strstr(line, "rate"))   g_WeapInfo[CurW].m_Rate  = (float)atof(value);
+				if (strstr(line, "shots"))  g_WeapInfo[CurW].m_Shots =        atoi(value);
+				if (strstr(line, "reload")) g_WeapInfo[CurW].m_Reload=        atoi(value);
+				if (strstr(line, "trace"))  g_WeapInfo[CurW].m_TraceC=        atoi(value)-1;
+				if (strstr(line, "optic"))  g_WeapInfo[CurW].m_Optic = (float)atof(value);
+				if (strstr(line, "fall"))   g_WeapInfo[CurW].m_Fall  =        atoi(value);
+				if (strstr(line, "price"))	g_WeapInfo[CurW].m_Price =        atoi(value);
 
 				if (strstr(line, "name")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_WeapInfo[CurW].Name = &value[1]; }
+					g_WeapInfo[CurW].m_Name = &value[1]; }
 
 				if (strstr(line, "file")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_WeapInfo[CurW].FilePath = &value[1]; }
+					g_WeapInfo[CurW].m_FilePath = &value[1]; }
 
 				if (strstr(line, "pic")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_WeapInfo[CurW].BulletFilePath = &value[1];}
+					g_WeapInfo[CurW].m_BulletFilePath = &value[1];}
 			}
 		}
 
@@ -83,13 +83,10 @@ void ReadCharacters(FILE *stream)
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
-			DinoInfo Blank;
-			g_DinoInfo.push_back( Blank );
+			DinoInfo di;
 
 			while (fgets( line, 255, stream))
 			{
-				int CurC = g_DinoInfo.size()-1;
-
 				if (strstr(line, "}"))
 				{
                     //AI_to_CIndex[DinoInfo[TotalC].AI] = TotalC;
@@ -102,31 +99,31 @@ void ReadCharacters(FILE *stream)
 					throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "mass"     )) g_DinoInfo[CurC].Mass      = (float)atof(value);
-				if (strstr(line, "length"   )) g_DinoInfo[CurC].Length    = (float)atof(value);
-				if (strstr(line, "radius"   )) g_DinoInfo[CurC].Radius    = (float)atof(value);
-				if (strstr(line, "health"   )) g_DinoInfo[CurC].Health0   = atoi(value);
-				if (strstr(line, "basescore")) g_DinoInfo[CurC].BaseScore = atoi(value);
-				if (strstr(line, "ai"       )) g_DinoInfo[CurC].AI        = atoi(value);
-				if (strstr(line, "smell"    )) g_DinoInfo[CurC].SmellK    = (float)atof(value);
-				if (strstr(line, "hear"     )) g_DinoInfo[CurC].HearK     = (float)atof(value);
-				if (strstr(line, "look"     )) g_DinoInfo[CurC].LookK     = (float)atof(value);
+				if (strstr(line, "mass"     )) di.m_Mass      = (float)atof(value);
+				if (strstr(line, "length"   )) di.m_Length    = (float)atof(value);
+				if (strstr(line, "radius"   )) di.m_Radius    = (float)atof(value);
+				if (strstr(line, "health"   )) di.m_Health0   = atoi(value);
+				if (strstr(line, "basescore")) di.m_BaseScore = atoi(value);
+				if (strstr(line, "ai"       )) di.m_AI        = atoi(value);
+				if (strstr(line, "smell"    )) di.m_SmellK    = (float)atof(value);
+				if (strstr(line, "hear"     )) di.m_HearK     = (float)atof(value);
+				if (strstr(line, "look"     )) di.m_LookK     = (float)atof(value);
 				// -> Safety Check
-				if (strstr(line, "smellk"   )) g_DinoInfo[CurC].SmellK    = (float)atof(value);
-				if (strstr(line, "heark"    )) g_DinoInfo[CurC].HearK     = (float)atof(value);
-				if (strstr(line, "lookk"    )) g_DinoInfo[CurC].LookK     = (float)atof(value);
+				if (strstr(line, "smellk"   )) di.m_SmellK    = (float)atof(value);
+				if (strstr(line, "heark"    )) di.m_HearK     = (float)atof(value);
+				if (strstr(line, "lookk"    )) di.m_LookK     = (float)atof(value);
 				// <- End
-				if (strstr(line, "shipdelta")) g_DinoInfo[CurC].ShDelta   = (float)atof(value);
-				if (strstr(line, "scale0"   )) g_DinoInfo[CurC].Scale0    = atoi(value);
-				if (strstr(line, "scaleA"   )) g_DinoInfo[CurC].ScaleA    = atoi(value);
-				if (strstr(line, "danger"   )) g_DinoInfo[CurC].DangerCall= true;
+				if (strstr(line, "shipdelta")) di.m_ShDelta   = (float)atof(value);
+				if (strstr(line, "scale0"   )) di.m_Scale0    = atoi(value);
+				if (strstr(line, "scaleA"   )) di.m_ScaleA    = atoi(value);
+				if (strstr(line, "danger"   )) di.m_DangerCall= true;
 
 				if (strstr(line, "name"))
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_DinoInfo[CurC].Name = &value[1];
+					di.m_Name = &value[1];
 				}
 
 				if (strstr(line, "file"))
@@ -137,7 +134,7 @@ void ReadCharacters(FILE *stream)
 					MessageBox(hwndMain, error, "Integer", MB_OK);*/
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_DinoInfo[CurC].FilePath = &value[1];
+					di.m_FilePath = &value[1];
 				}
 
 				if (strstr(line, "pic"))
@@ -145,9 +142,11 @@ void ReadCharacters(FILE *stream)
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_DinoInfo[CurC].PicturePath = &value[1];
+					di.m_PicturePath = &value[1];
 				}
 			}
+
+			g_DinoInfo.push_back(di);
 		}
 
 	}
@@ -179,29 +178,22 @@ void ReadAreas(FILE *stream)
 					throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "cost"   ))	g_AreaInfo[CurC].Cost = atoi(value);
-				if (strstr(line, "rank"))		g_AreaInfo[CurC].Rank = atoi(value);
+				if (strstr(line, "cost"   ))	g_AreaInfo[CurC].m_Cost = atoi(value);
+				if (strstr(line, "rank"))		g_AreaInfo[CurC].m_Rank = atoi(value);
 
 				if (strstr(line, "name"))
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_AreaInfo[CurC].Name = &value[1];
+					g_AreaInfo[CurC].m_Name = &value[1];
 				}
 
-				if (strstr(line, "map"))
+				if (strstr(line, "pname"))
 				{
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value)-2] = 0;
-					g_AreaInfo[CurC].MapPath = &value[1];
-				}
-
-				if (strstr(line, "rsc"))
-				{
-					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
-					g_AreaInfo[CurC].RscPath = &value[1];
+					g_AreaInfo[CurC].m_ProjectName = &value[1];
 				}
 
 				if (strstr(line, "thumbnail"))
@@ -444,3 +436,57 @@ void Options::Default()
 	this->RenderAPI = 0;
 }
 
+
+Wave::Wave() :
+	m_Data(nullptr),
+	m_Length(0U),
+	m_Frequency(22050U)
+{
+}
+
+
+Wave::Wave(const Wave& w)
+{
+	if (w.m_Length && w.m_Data) {
+		m_Data = new int16_t[w.m_Length];
+		memcpy(m_Data, w.m_Data, w.m_Length);
+	}
+
+	m_Length = w.m_Length;
+	m_Frequency = w.m_Frequency;
+}
+
+
+Wave::~Wave()
+{
+	if (m_Data)
+		delete[] m_Data;
+}
+
+
+Picture::Picture() :
+	m_Width(0),
+	m_Height(0),
+	m_Data(nullptr)
+{}
+
+
+Picture::Picture(const Picture& p)
+{
+	m_Data = nullptr;
+
+	if (p.m_Width && p.m_Height && p.m_Data) {
+		m_Data = new uint16_t[p.m_Width * p.m_Height];
+		memcpy(m_Data, p.m_Data, (p.m_Width * 2) * p.m_Height);
+	}
+
+	m_Width = p.m_Width;
+	m_Height = p.m_Height;
+}
+
+
+Picture::~Picture()
+{
+	if (m_Data)
+		delete[] m_Data;
+}

@@ -176,14 +176,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 			}
 			else
 			{
-				if (GetActiveWindow() == hwndMain) {
-					ProcessMenu();
-					// We need to sleep this_thread every frame, because the program emits a strange subtle 'noise' otherwise. It also
-					// renders way too many frames
-					//std::this_thread::sleep_for(std::chrono::milliseconds(5));
-				}
-				else {
-					std::this_thread::sleep_for(std::chrono::milliseconds(50));
+				ProcessMenu();
+
+				if (GetActiveWindow() != hwndMain) {
+					// Sleep when the window is not the active one (10 ticks/frames per second)
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
 				}
 			}
 		}
