@@ -287,8 +287,6 @@ void TrophyLoad(Profile& profile, int pr)
 	fs.read((char*)&g_Options.SoundAPI, 4);
 	fs.read((char*)&g_Options.RenderAPI, 4);
 
-	//fs.read((char*)profile.Body, sizeof(TrophyItem) * 24);
-
 	//SetupRes();
 
 	//TrophyRoom.RegNumber = rn;
@@ -331,9 +329,7 @@ void TrophySave(Profile& profile)
 	fs.write((char*)&g_Options.SoundAPI, 4);
 	fs.write((char*)&g_Options.RenderAPI, 4);
 
-	fs.write((char*)profile.Body, sizeof(TrophyItem) * 24);
-
-	//SetupRes();
+	// Append any data you want, the original games do not check the file size and stop reading at this point
 
 	std::cout << "Trophy Saved." << std::endl;
 }
@@ -401,9 +397,9 @@ void Profile::New(const std::string& name)
 
 void Options::Default()
 {
-	this->Aggression = 0;
-	this->Density = 0;
-	this->Sensitivity = 0;
+	this->Aggression = 128;
+	this->Density = 128;
+	this->Sensitivity = 128;
 	this->Resolution = 5;
 	this->Fog = true;
 	this->Textures = 1;

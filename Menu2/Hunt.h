@@ -73,7 +73,8 @@ enum ResolutionsEnum
 	RES_800x600 = 4,
 	RES_1024x768 = 5,
 	RES_1280x1024 = 6,
-	RES_1600x1200 = 7
+	RES_1600x1200 = 7,
+	RES_MAX
 };
 /*
 if (!HARD3D && OptRes > 5) { OptRes = 0; }
@@ -472,6 +473,7 @@ EXTERNAL HWND					hwndMain;
 EXTERNAL HDC					hdcMain;
 EXTERNAL HFONT					fnt_Small;
 EXTERNAL HFONT					fnt_Midd;
+EXTERNAL HFONT					g_FontOptions;
 EXTERNAL HFONT					fnt_Big;
 
 EXTERNAL MenuItem				g_MenuItem;
