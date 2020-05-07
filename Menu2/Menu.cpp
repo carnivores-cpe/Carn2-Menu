@@ -24,13 +24,15 @@ public:
 	int32_t		Selected;
 	int32_t		Hilite;
 	RECT		Rect;
+	int32_t		Padding;
 
 	MenuSet() :
 		x0(0), y0(0),
 		Count(0),
 		Selected(-1),
 		Hilite(-1),
-		Rect({ 0,0,0,0 })
+		Rect({ 0,0,0,0 }),
+		Padding(0)
 	{}
 
 	void AddItem(const std::string& txt);
@@ -55,6 +57,7 @@ enum DrawTextAlignEnum {
 };
 
 
+Picture g_TrackBar[2];
 MenuSet MenuOptions[3];
 MenuSet MenuRegistry;
 
@@ -243,6 +246,7 @@ void InitInterface()
 	int m = OPT_GAME;
 	MenuOptions[m].x0 = 40; // 170 HX, 380 W
 	MenuOptions[m].y0 = 75;
+	MenuOptions[m].Padding = 20;
 	MenuOptions[m].Count = 0;
 	MenuOptions[m].AddItem("Agressivity");
 	MenuOptions[m].AddItem("Density");
@@ -255,6 +259,7 @@ void InitInterface()
 	m = OPT_KEYBINDINGS;
 	MenuOptions[m].x0 = 422;
 	MenuOptions[m].y0 = 75;
+	MenuOptions[m].Padding = 20;
 	MenuOptions[m].Count = 0;
 	MenuOptions[m].AddItem("Forward");
 	MenuOptions[m].AddItem("Backward");
@@ -281,6 +286,7 @@ void InitInterface()
 	m = OPT_VIDEO;
 	MenuOptions[m].x0 = 70;
 	MenuOptions[m].y0 = 350;
+	MenuOptions[m].Padding = 20;
 	MenuOptions[m].Count = 0;
 	MenuOptions[m].AddItem("Graphics API");
 	MenuOptions[m].AddItem("Resolution");
@@ -290,6 +296,10 @@ void InitInterface()
 	MenuOptions[m].AddItem("Alpha Source");
 	MenuOptions[m].AddItem("Brightness");
 	MenuOptions[m].Rect = { 40, 350, 380, 350 + (MenuOptions[2].Count * 24) };
+
+	// TODO: enable these and use them instead of GDI drawing for the trackbars
+	//LoadPicture(g_TrackBar[0], "huntdat/menu/sl_bar.tga");
+	//LoadPicture(g_TrackBar[1], "huntdat/menu/sl_but.tga");
 
 	std::cout << "Menu Interface initialised!" << std::endl;
 }
@@ -385,7 +395,7 @@ void DrawSliderBar(int x, int y, int w, float v, int slider_rgb = RGB(239, 228, 
 	if (v > 1.0f)
 		v = 1.0f;
 
-	int xs = x + ((w-2) * v);
+	int xs = (int)(x + ((w-2) * v));
 
 	//HPEN wp = CreatePen(PS_SOLID, 0, 0x009F9F9F);
 
@@ -973,93 +983,117 @@ void MenuEventInput(int32_t menu)
 					}
 					else mo.Hilite = -1;
 
-					if (g_KeyboardState[VK_LBUTTON] & 128)
+					if (g_KeyboardState[VK_LBUTTON] & 128) // Left Click
 					{
-						WaitForMouseRelease();
-
 						if (m == OPT_GAME) {
-							//click
+							MenuSet& menu = MenuOptions[OPT_GAME];
+							//int w = (menu.Rect.right - menu.Rect.left) - menu.Padding;
+							int x1 = menu.Rect.right - menu.Padding;
+							int tbw = ((menu.Rect.right - menu.Rect.left) / 2) - menu.Padding;
+							float v = (float)(p.x - (x1 - tbw)) / (float)tbw;
+
 							mo.Selected = mo.Hilite;
-							if (mo.Hilite == 19)
+
+							if (mo.Hilite == 0)
 							{
-								g_Options.Aggression = 128;
+								g_Options.Aggression = (int)(v * 255.f);
 							}
 							else if (mo.Hilite == 1)
 							{
-								g_Options.Density = 128;
+								g_Options.Density = (int)(v * 255.f);
 							}
 							else if (mo.Hilite == 2)
 							{
-								g_Options.Sensitivity = 128;
+								g_Options.Sensitivity = (int)(v * 255.f);
 							}
 							else if (mo.Hilite == 3)
 							{
-								g_Options.ViewRange = 128;
+								g_Options.ViewRange = (int)(v * 255.f);
 							}
 							else if (mo.Hilite == 4) // Metric or Imperial(US)
 							{
+								WaitForMouseRelease();
 								g_Options.OptSys = !g_Options.OptSys;
 							}
 							else if (mo.Hilite == 5)
 							{
+								WaitForMouseRelease();
 								g_Options.SoundAPI++;
 								if (g_Options.SoundAPI == 4)
 									g_Options.SoundAPI = 0;
 							}
 						}
-						if (m == OPT_KEYBINDINGS) {
-							//click
+						else if (m == OPT_KEYBINDINGS) { // Left Click
+							MenuSet& menu = MenuOptions[OPT_KEYBINDINGS];
+							//int w = (menu.Rect.right - menu.Rect.left) - menu.Padding;
+							int x1 = menu.Rect.right - menu.Padding;
+							int tbw = ((menu.Rect.right - menu.Rect.left) / 2) - menu.Padding;
+							float v = (float)(p.x - (x1 - tbw)) / (float)tbw;
+
 							mo.Selected = mo.Hilite;
 
 							if (mo.Hilite < 18)
 							{
+								WaitForMouseRelease();
 								g_WaitKey = mo.Hilite;
 							}
 							else if (mo.Hilite == 18) // Mouse Y-Axis Inverted
 							{
+								WaitForMouseRelease();
 								g_Options.MouseInvert = !g_Options.MouseInvert;
 							}
 							else if (mo.Hilite == 19) // Mouse Sensitivty Slider
 							{
-								g_Options.MouseSensitivity = 128;
+								g_Options.MouseSensitivity = (int)(v * 255.f);
 							}
 						}
-						if (m == OPT_VIDEO) {
-							//click
+						else if (m == OPT_VIDEO) { // Left Click
+							MenuSet& menu = MenuOptions[OPT_VIDEO];
+							//int w = (menu.Rect.right - menu.Rect.left) - menu.Padding;
+							int x1 = menu.Rect.right - menu.Padding;
+							int tbw = ((menu.Rect.right - menu.Rect.left) / 2) - menu.Padding;
+							float v = (float)(p.x - (x1 - tbw)) / (float)tbw;
+
 							mo.Selected = mo.Hilite;
 							if (mo.Hilite == 0)
 							{
+								WaitForMouseRelease();
 								g_Options.RenderAPI++;
 								if (g_Options.RenderAPI == 3)
 									g_Options.RenderAPI = 0;
 							}
 							if (mo.Hilite == 1) // Resolution
 							{
+								WaitForMouseRelease();
 								g_Options.Resolution++;
 								if (g_Options.Resolution == RES_MAX)
 									g_Options.Resolution = 0;
 							}
 							else if (mo.Hilite == 2) // Shadows
 							{
+								WaitForMouseRelease();
 								g_Options.Shadows = !g_Options.Shadows;
 							}
 							else if (mo.Hilite == 3) // Fog
 							{
+								WaitForMouseRelease();
 								g_Options.Fog = !g_Options.Fog;
 							}
 							else if (mo.Hilite == 4) // Textures
 							{
+								WaitForMouseRelease();
 								g_Options.Textures++;
 								if (g_Options.Textures == 3)
 									g_Options.Textures = 0;
 							}
 							else if (mo.Hilite == 5) // Colorkey
 							{
+								WaitForMouseRelease();
 								g_Options.AlphaColorKey = !g_Options.AlphaColorKey;
 							}
 							else if (mo.Hilite == 6) // Brightness
 							{
-								g_Options.Brightness = 128; // TODO: Sliders
+								g_Options.Brightness = (int)(v * 255.f);
 							}
 						}
 					}
@@ -1144,16 +1178,16 @@ void DrawOptionsMenu()
 
 	// Game options
 	for (int i = 0; i < MenuOptions[OPT_GAME].Count; i++) {
-		int x0 = MenuOptions[OPT_GAME].Rect.left + 20;// .x0;
-		int x1 = MenuOptions[OPT_GAME].Rect.right - 20;// .x0;
-		int y0 = MenuOptions[OPT_GAME].y0 + (22 * i);
-		int tbw = ((MenuOptions[OPT_GAME].Rect.right - MenuOptions[OPT_GAME].Rect.left) / 2) - 20;
+		MenuSet& menu = MenuOptions[OPT_GAME];
+		int x0 = menu.Rect.left + menu.Padding;// .x0;
+		int x1 = menu.Rect.right - menu.Padding;// .x0;
+		int y0 = menu.y0 + (22 * i);
+		int tbw = ((menu.Rect.right - menu.Rect.left) / 2) - menu.Padding;
 
-		if (MenuOptions[OPT_GAME].Hilite == i) c = on_c;
+		if (menu.Hilite == i) c = on_c;
 		else c = label_c;
-		//if (MenuOptions[OPT_GAME].Selected == i) c = RGB(100, 100, 239);
 
-		DrawTextShadow(x0, y0, MenuOptions[OPT_GAME].Item[i], c);
+		DrawTextShadow(x0, y0, menu.Item[i], c);
 
 		if (i == 0) DrawSliderBar(x1 - tbw, y0 + 12, tbw, (float)g_Options.Aggression / 255.0f, label_c);
 		if (i == 1) DrawSliderBar(x1 - tbw, y0 + 12, tbw, (float)g_Options.Density / 255.0f, label_c);
@@ -1165,20 +1199,20 @@ void DrawOptionsMenu()
 
 	// Control key bindings
 	for (int i = 0; i < MenuOptions[OPT_KEYBINDINGS].Count; i++) {
-		int x0 = MenuOptions[OPT_KEYBINDINGS].Rect.left + 20;// .x0;
-		int x1 = MenuOptions[OPT_KEYBINDINGS].Rect.right - 20;// .x0;
-		int y0 = MenuOptions[OPT_KEYBINDINGS].y0 + (22 * i);
-		int tbw = ((MenuOptions[OPT_KEYBINDINGS].Rect.right - MenuOptions[OPT_KEYBINDINGS].Rect.left) / 2) - 20;
+		MenuSet &menu = MenuOptions[OPT_KEYBINDINGS];
+		int x0 = menu.Rect.left + menu.Padding;// .x0;
+		int x1 = menu.Rect.right - menu.Padding;// .x0;
+		int y0 = menu.y0 + (22 * i);
+		int tbw = ((menu.Rect.right - menu.Rect.left) / 2) - menu.Padding;
 
 		std::stringstream ss;
 
-		ss << KeyNames[MapVKKey(*((int32_t*)&g_Options.KeyMap + i))];
+		ss << g_KeyNames[MapVKKey(*((int32_t*)&g_Options.KeyMap + i))];
 
-		if (MenuOptions[OPT_KEYBINDINGS].Hilite == i) c = on_c;
+		if (menu.Hilite == i) c = on_c;
 		else c = label_c;
-		//if (MenuOptions[OPT_KEYBINDINGS].Selected == i) c = RGB(100, 100, 239);
 
-		DrawTextShadow(x0, y0, MenuOptions[OPT_KEYBINDINGS].Item[i], c);
+		DrawTextShadow(x0, y0, menu.Item[i], c);
 
 		if (i < 18)
 		{
@@ -1191,16 +1225,16 @@ void DrawOptionsMenu()
 
 	// Video/Graphics options
 	for (int i = 0; i < MenuOptions[OPT_VIDEO].Count; i++) {
-		int x0 = MenuOptions[OPT_VIDEO].Rect.left + 20;// x0;
-		int x1 = MenuOptions[OPT_VIDEO].Rect.right - 20;// x0;
-		int y0 = MenuOptions[OPT_VIDEO].y0 + (22 * i);
-		int tbw = ((MenuOptions[OPT_VIDEO].Rect.right - MenuOptions[OPT_VIDEO].Rect.left) / 2) - 20;
+		MenuSet &menu = MenuOptions[OPT_VIDEO];
+		int x0 = menu.Rect.left + menu.Padding;// x0;
+		int x1 = menu.Rect.right - menu.Padding;// x0;
+		int y0 = menu.y0 + (22 * i);
+		int tbw = ((menu.Rect.right - menu.Rect.left) / 2) - menu.Padding;
 
-		if (MenuOptions[OPT_VIDEO].Hilite == i) c = on_c;
+		if (menu.Hilite == i) c = on_c;
 		else c = label_c;
-		//if (MenuOptions[OPT_VIDEO].Selected == i) c = RGB(100, 100, 239);
 
-		DrawTextShadow(x0, y0, MenuOptions[OPT_VIDEO].Item[i], c);
+		DrawTextShadow(x0, y0, menu.Item[i], c);
 
 		if (i == 0) DrawTextShadow(x1, y0, st_RenText[g_Options.RenderAPI], value_c, DTA_RIGHT);
 		else if (i == 1) {

@@ -371,6 +371,23 @@ bool ReadTGAFile(const std::string& path, TargaImage& tga)
 }
 
 
+void LoadPicture(Picture& pic, const std::string& fpath)
+{
+	TargaImage tga;
+	if (ReadTGAFile(fpath, tga)) {
+
+		pic.m_Width = tga.m_Header.tgaWidth;
+		pic.m_Height = tga.m_Header.tgaHeight;
+
+		if (pic.m_Data)
+			delete[] pic.m_Data;
+
+		pic.m_Data = new uint16_t[pic.m_Width * pic.m_Height];
+		memcpy(pic.m_Data, tga.m_Data, pic.m_Width * pic.m_Height * sizeof(uint16_t));
+	}
+}
+
+
 void TrophyDelete(uint32_t trophy_index)
 {
 	std::stringstream fname;
@@ -382,11 +399,14 @@ void TrophyDelete(uint32_t trophy_index)
 }
 
 
-void Profile::New(const std::string& name)
+void Profile::New(const std::string& name, int32_t index)
 {
+	if (index == -1)
+		index = g_ProfileIndex;
+
 	memset(Name, 0, 128);
 	memcpy(Name, name.data(), name.length());
-	RegNumber = g_ProfileIndex;
+	RegNumber = index;
 	Score = 100; // TODO get this from _RES
 	Rank = 0;
 	memset(&Last, 0, sizeof(ProfileStats));
@@ -403,10 +423,10 @@ void Options::Default()
 	this->Resolution = 5;
 	this->Fog = true;
 	this->Textures = 1;
-	this->ViewRange = 10;
+	this->ViewRange = 128;
 	this->Shadows = true;
 	this->MouseSensitivity = 128;
-	this->Brightness = 0;
+	this->Brightness = 128;
 	// -- Set default controls
 	this->KeyMap.fkForward = 'W';
 	this->KeyMap.fkBackward = 'S';
@@ -423,7 +443,7 @@ void Options::Default()
 	this->KeyMap.fkDown = VK_DOWN;
 	this->KeyMap.fkLeft = VK_LEFT;
 	this->KeyMap.fkRight = VK_RIGHT;
-	/*
+	/* Taken from the RH Carnivores 2 3.x.x patches
 	this->KeyMap.fkMenu		= VK_ESCAPE;
 	this->KeyMap.fkMap		= VK_TAB;
 	this->KeyMap.fkNightVision= 'N';
@@ -433,18 +453,18 @@ void Options::Default()
 	this->KeyMap.fkConsole	= 126; // Tilde '~'
 	*/
 	this->MouseInvert = false;
-	this->ScentMode = 0;
-	this->CamoMode = 0;
-	this->RadarMode = 0;
-	this->TranqMode = 0;
-	this->AlphaColorKey = 0;
-	this->OptSys = 0;
-	this->SoundAPI = 0;
-	this->RenderAPI = 0;
+	this->ScentMode = false;
+	this->CamoMode = false;
+	this->RadarMode = false;
+	this->TranqMode = false;
+	this->AlphaColorKey = 1;
+	this->OptSys = 1;
+	this->SoundAPI = 0; // Default to software
+	this->RenderAPI = 0; // Default to software
 }
 
 
-Wave::Wave() :
+SoundFX::SoundFX() :
 	m_Data(nullptr),
 	m_Length(0U),
 	m_Frequency(22050U)
@@ -452,7 +472,7 @@ Wave::Wave() :
 }
 
 
-Wave::Wave(const Wave& w)
+SoundFX::SoundFX(const SoundFX& w)
 {
 	if (w.m_Length && w.m_Data) {
 		m_Data = new int16_t[w.m_Length];
@@ -464,7 +484,7 @@ Wave::Wave(const Wave& w)
 }
 
 
-Wave::~Wave()
+SoundFX::~SoundFX()
 {
 	if (m_Data)
 		delete[] m_Data;

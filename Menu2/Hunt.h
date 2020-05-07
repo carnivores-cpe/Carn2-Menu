@@ -162,45 +162,16 @@ public:
 };
 
 
-/*typedef struct _tagVertex {
-	float x, y, z;
-	int16_t hide, bone;
-} TVertex;
-
-
-typedef struct _tagFace {
-	int32_t		v1, v2, v3;
-	int32_t		tx1, tx2, tx3;
-	int32_t		ty1, ty2, ty3;
-	uint16_t	Flags, DMask;
-	int32_t		Distant, Next, group;
-	uint32_t	reserv[3];
-} TFace;
-
-
-class Model
-{
-public:
-	int32_t		VCount;
-	int32_t		FCount;
-	uint32_t	TexLength;
-
-	void* lpTexture;
-
-	TVertex* lpVertices;
-	TFace* lpFace;
-};*/
-
-class Wave
+class SoundFX
 {
 public:
 	int16_t* m_Data;
 	uint32_t m_Length;
 	uint32_t m_Frequency;
 
-	Wave();
-	Wave(const Wave& w);
-	~Wave();
+	SoundFX();
+	SoundFX(const SoundFX& w);
+	~SoundFX();
 };
 
 
@@ -317,8 +288,8 @@ public:
 	std::string	m_Name; // Area Name
 	std::string	m_ProjectName; // MAP & RSC filename
 
-	int m_Cost; // Credits cost
-	int m_Rank; // Rank required/recommended to play map
+	int32_t m_Cost; // Credits cost
+	int32_t m_Rank; // Rank required/recommended to play map
 
 	std::vector<int> m_DinosAvail; // A list of animal AI indexes that are available on this map.
 
@@ -380,21 +351,18 @@ public:
 	int32_t	Aggression;
 	int32_t Density;
 	int32_t Sensitivity;
-	int32_t OptSys;
+	int32_t OptSys; // Metric or Imperial
 
 	/* Graphics */
 
 	int32_t	Resolution; // ResolutionsEnum
-	int32_t Resolution_W, Resolution_H; // [NEW] Resolution in pixels
 	int32_t Textures;
 	int32_t ViewRange;
-	int32_t LevelOfDetailBias; // [NEW] Range where the Level of Detail decreases
 	int32_t Brightness;
 	int32_t AlphaColorKey;
 	int32_t RenderAPI; // The Render API/Version to use
 	bool Fog; // Render volumetric fog
 	bool Shadows; // Render real-time shadows
-	bool Particles; // [NEW] Wether to render/process particles
 
 	int32_t	SoundAPI; // Audio system
 
@@ -409,9 +377,17 @@ public:
 class TrophyItem
 {
 public:
-	int32_t ctype, weapon, phase, height, weight, score, date, time;
-	float scale, range;
-	int32_t r1, r2, r3, r4;
+	int32_t m_CType;
+	int32_t m_Weapon;
+	int32_t m_Phase;
+	int32_t m_Height;
+	int32_t m_Weight;
+	int32_t m_Score;
+	int32_t m_Date;
+	int32_t m_Time;
+	float m_Scale;
+	float m_Range;
+	int32_t m_Reserved[4];
 };
 
 
@@ -436,7 +412,7 @@ public:
 	ProfileStats Total;
 	TrophyItem Body[24];
 
-	void New(const std::string& name);
+	void New(const std::string& name, int32_t index = -1);
 
 };
 
@@ -519,6 +495,7 @@ void TrophyLoad(Profile& profile, int pr);
 void TrophySave(Profile& profile);
 void TrophyDelete(uint32_t);
 bool ReadTGAFile(const std::string& path, TargaImage& tga);
+void LoadPicture(Picture& pic, const std::string& fpath);
 
 /*** Networking ***/
 void InitNetwork();
@@ -528,7 +505,7 @@ void NetworkPost(LPSTR url, LPSTR host, LPSTR data);
 
 
 #ifdef _MAIN_
-EXTERNAL char KeyNames[256][24] = {
+EXTERNAL char g_KeyNames[256][24] = {
 "...",
 "Esc",
 "1",
@@ -667,5 +644,5 @@ EXTERNAL char KeyNames[256][24] = {
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""
 };
 #else
-EXTERNAL char KeyNames[128][24];
+EXTERNAL char g_KeyNames[128][24];
 #endif
