@@ -611,6 +611,18 @@ void LoadGameMenu(int32_t menu)
 		mf_on = "HUNTDAT/MENU/MENUR_ON.TGA";
 		mf_map = "HUNTDAT/MENU/MR_MAP.RAW";
 	} break;
+	case MENU_REGISTRY_DELETE:
+	{
+		mf_off = "HUNTDAT/MENU/MENUD.TGA";
+		mf_on = "HUNTDAT/MENU/MENUD_ON.TGA";
+		mf_map = "HUNTDAT/MENU/MD_MAP.RAW";
+	} break;
+	case MENU_REGISTRY_WAIVER:
+	{
+		mf_off = "HUNTDAT/MENU/MENUL.TGA";
+		mf_on = "HUNTDAT/MENU/MENUL_ON.TGA";
+		mf_map = "HUNTDAT/MENU/ML_MAP.RAW";
+	} break;
 	case MENU_MAIN:
 	{
 		mf_off = "HUNTDAT/MENU/MENUM.TGA";
@@ -723,7 +735,7 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 Draw the profile details that appear at the top of the main menu,
 such as Profile Name, Score, Rank.
 */
-void DrawProfileMenu()
+void DrawMenuProfile()
 {
 	std::stringstream ss;
 
@@ -750,7 +762,7 @@ void DrawProfileMenu()
 Draw this profile's last hunt statistics and total hunt statistics, also calls DrawProfileMenu()
 to draw the profile name and score/rank as an overlay.
 */
-void DrawStatisticsMenu()
+void DrawMenuStatistics()
 {
 	std::stringstream ss;
 	int c = RGB(239, 228, 176);
@@ -794,17 +806,28 @@ void DrawStatisticsMenu()
 
 	InterfaceSetFont(NULL);
 
-	DrawProfileMenu();
+	DrawMenuProfile();
 }
 
 
-void DrawHuntMenu()
+/*
+*/
+void DrawMenuCredits()
+{
+	InterfaceSetFont(fnt_Small);
+
+	DrawTextShadow(600, 60, "Launcher Code:", RGB(239, 228, 176));
+	DrawTextShadow(700, 60, "Rexhunter99", RGB(239, 228, 176));
+}
+
+
+void DrawMenuHunt()
 {
 	std::stringstream ss;
 
-	ss << g_UserProfile.Score;
-
 	InterfaceSetFont(fnt_Big);
+
+	ss << g_UserProfile.Score;
 	DrawTextShadow(335, 38, ss.str(), RGB(239, 228, 176));
 	ss.str(""); ss.clear();
 
@@ -835,47 +858,58 @@ void DrawHuntMenu()
 /*
 Draw the save file 'registry' menu
 */
-void DrawRegistryMenu(POINT& p)
+void DrawMenuRegistry()
 {
+	POINT& p = g_CursorPos;
 	std::stringstream ss;
-
 	uint32_t color = RGB(239, 228, 176);
-	InterfaceSetFont(fnt_Small);
 
-	if ((timeGetTime() % 800) > 300)
-		ss << g_TypingBuffer << "_";
-	else
-		ss << g_TypingBuffer;
-
-	DrawTextShadow(315, 326, ss.str(), color);
-
-	g_HiliteProfileIndex = g_ProfileIndex;
-
-	// 320, 370
-	for (int i = 0; i < 6; i++)
+	if (g_MenuState == MENU_REGISTRY_DELETE)
 	{
-		color = 0xB0B070; // Base colour
-
-		if (i == g_HiliteProfileIndex)
-			color = RGB(255, 170, 10);
-
-		if (p.x >= 308 && p.y >= (368 + (16 * i)) && p.x <= 408 && p.y <= (368 + (16 * i) + 16)) {
-			g_HiliteProfileIndex = i; //temporary, move to another function for user input
-#ifdef _DEBUG
-			color = RGB(42, 255, 42);
-#endif
-		}
-
-		std::string tname = g_Profiles[i].m_Name;
-
-		if (g_Profiles[i].m_Name.empty()) {
-			tname = "...";
-		}
-
-		DrawTextShadow(320, 370 + (16 * i), tname, color);
+		InterfaceSetFont(fnt_Midd);
+		DrawTextShadow(290, 370, "Do you want to delete player", 0x00B08030);
+		ss << "\'" << g_UserProfile.Name << "\' ?";
+		DrawTextShadow(300, 394, ss.str(), 0x00B08030);
+		InterfaceSetFont(0);
 	}
+	else {
+		InterfaceSetFont(fnt_Small);
 
-	InterfaceSetFont(NULL);
+		if ((timeGetTime() % 800) > 300)
+			ss << g_TypingBuffer << "_";
+		else
+			ss << g_TypingBuffer;
+
+		DrawTextShadow(315, 326, ss.str(), color);
+
+		g_HiliteProfileIndex = g_ProfileIndex;
+
+		// 320, 370
+		for (int i = 0; i < 6; i++)
+		{
+			color = 0xB0B070; // Base colour
+
+			if (i == g_HiliteProfileIndex)
+				color = RGB(255, 170, 10);
+
+			if (p.x >= 308 && p.y >= (368 + (16 * i)) && p.x <= 408 && p.y <= (368 + (16 * i) + 16)) {
+				g_HiliteProfileIndex = i; //temporary, move to another function for user input
+#ifdef _DEBUG
+				color = RGB(42, 255, 42);
+#endif
+			}
+
+			std::string tname = g_Profiles[i].m_Name;
+
+			if (g_Profiles[i].m_Name.empty()) {
+				tname = "...";
+			}
+
+			DrawTextShadow(320, 370 + (16 * i), tname, color);
+		}
+
+		InterfaceSetFont(NULL);
+	}
 }
 
 
@@ -929,23 +963,59 @@ void MenuEventInput(int32_t menu)
 					g_UserProfile.New(g_TypingBuffer);
 					g_Options.Default();
 					TrophySave(g_UserProfile);
+					WaitForMouseRelease();
+					ChangeMenuState(MENU_REGISTRY_WAIVER);
 				}
 				else {
 					TrophyLoad(g_UserProfile, g_ProfileIndex);
+					WaitForMouseRelease();
+					ChangeMenuState(MENU_MAIN);
 				}
-
-				WaitForMouseRelease();
-				ChangeMenuState(MENU_MAIN);
 			}
 			else if (id == 2) {
 				// Delete the selected 'save'
 				WaitForMouseRelease();
-				//TrophyDelete(g_ProfileIndex);
-				MenuEventStart(menu); // -- Retrigger the start event
+				ChangeMenuState(MENU_REGISTRY_DELETE);
 			}
 			else {
 				WaitForMouseRelease();
 				g_ProfileIndex = g_HiliteProfileIndex;
+			}
+		}
+	}
+	/*
+	*/
+	else if (menu == MENU_REGISTRY_DELETE)
+	{
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			if (id == 1)
+			{
+				WaitForMouseRelease();
+				TrophyDelete(g_ProfileIndex); // Delete the last clicked profile
+				ChangeMenuState(MENU_REGISTER);
+			}
+			else if (id == 2)
+			{
+				WaitForMouseRelease();
+				ChangeMenuState(MENU_REGISTER);
+			}
+		}
+	}
+	/*
+	*/
+	else if (menu == MENU_REGISTRY_WAIVER)
+	{
+		if (g_KeyboardState[VK_LBUTTON] & 128) {
+			if (id == 1)
+			{
+				WaitForMouseRelease();
+				ChangeMenuState(MENU_MAIN);
+			}
+			else if (id == 2)
+			{
+				WaitForMouseRelease();
+				TrophyDelete(g_ProfileIndex);
+				ChangeMenuState(MENU_REGISTER);
 			}
 		}
 	}
@@ -1166,7 +1236,7 @@ void MenuEventInput(int32_t menu)
 }
 
 
-void DrawOptionsMenu()
+void DrawMenuOptions()
 {
 	const int label_c = 0x007696b5; // From Carnivores: Ice Age (JPEG image)
 	const int value_c = 0x00abb4a7; // From Carnivores: Ice Age (JPEG image)
@@ -1310,13 +1380,14 @@ void ProcessMenu()
 	// Draw menus
 	switch (g_MenuState)
 	{
-	case MENU_REGISTER: DrawRegistryMenu(g_CursorPos); break;
-	case MENU_MAIN: DrawProfileMenu(); break;
-	case MENU_STATISTICS: DrawStatisticsMenu(); break;
-	case MENU_QUIT: DrawProfileMenu(); break;
-	case MENU_OPTIONS: DrawOptionsMenu(); break;
-	case MENU_CREDITS: /* do rendering */ break;
-	case MENU_HUNT: DrawHuntMenu(); break;
+	case MENU_REGISTRY_DELETE: DrawMenuRegistry(); break;
+	case MENU_REGISTER: DrawMenuRegistry(); break;
+	case MENU_MAIN: DrawMenuProfile(); break;
+	case MENU_STATISTICS: DrawMenuStatistics(); break;
+	case MENU_QUIT: DrawMenuProfile(); break;
+	case MENU_OPTIONS: DrawMenuOptions(); break;
+	case MENU_CREDITS: DrawMenuCredits(); break;
+	case MENU_HUNT: DrawMenuHunt(); break;
 	}
 
 #ifdef _DEBUG
@@ -1363,8 +1434,6 @@ void ProcessMenu()
 
 	// Draw the GDI buffer to the window
 	InterfaceBlt();
-
-	//g_PrevMenuState = g_MenuState;
 }
 
 
@@ -1382,6 +1451,20 @@ void MenuKeyCharEvent(uint16_t wParam)
 				}
 			}
 		}
+	}
+}
+
+
+void MenuMouseScrollEvent(int32_t menu, int32_t scroll)
+{
+	// TODO: Enable scrolling of text lists
+	if (menu == MENU_REGISTER)
+	{
+
+	}
+	else if (menu == MENU_HUNT)
+	{
+
 	}
 }
 

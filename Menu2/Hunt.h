@@ -432,6 +432,8 @@ public:
 enum MenuStateEnum {
 	//MENU_SPLASH, // Rework the menu to support this
 	MENU_REGISTER,
+	MENU_REGISTRY_DELETE,
+	MENU_REGISTRY_WAIVER,
 	MENU_MAIN,
 	MENU_STATISTICS,
 	MENU_HUNT,
@@ -486,6 +488,7 @@ void DrawPicture(int, int, int, int, uint16_t*);
 void DrawTextShadow(int x, int y, const std::string& text, uint32_t color, int align);
 void LoadGameMenu(int32_t);
 void MenuKeyCharEvent(uint16_t);
+void MenuMouseScrollEvent(int32_t, int32_t);
 void ProcessMenu();
 
 /*** Resources ***/

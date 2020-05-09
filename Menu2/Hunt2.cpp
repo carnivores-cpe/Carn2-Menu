@@ -59,6 +59,14 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lPar
 		PostQuitMessage(0);
 		break;
 
+	case WM_MOUSEWHEEL:
+	{
+		//std::cout << "Mouse Wheel Event: " << (int16_t)HIWORD(wParam) << " " << WHEEL_DELTA << std::endl;
+		// HIWORD(wParam) is increments of WHEEL_DATA, positive numbers are scrolling away from the user, negative towards.
+		// 
+		int scroll_mult = (int)HIWORD(wParam) / WHEEL_DELTA;
+		MenuMouseScrollEvent(g_MenuState, scroll_mult);
+	} break;
 	case WM_KEYDOWN:
 	{
 #ifdef _DEBUG
