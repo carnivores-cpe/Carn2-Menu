@@ -47,26 +47,30 @@ void CloseLogs()
 }
 
 
-LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lParam)
+LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
+	case WM_NCCREATE:
+		return true;
+
 	case WM_CLOSE:
 		PostQuitMessage(0);
-		break;
+		return 0;
 
 	case WM_DESTROY:
 		PostQuitMessage(0);
-		break;
+		return 0;
 
 	case WM_MOUSEWHEEL:
 	{
 		//std::cout << "Mouse Wheel Event: " << (int16_t)HIWORD(wParam) << " " << WHEEL_DELTA << std::endl;
 		// HIWORD(wParam) is increments of WHEEL_DATA, positive numbers are scrolling away from the user, negative towards.
 		// 
-		int scroll_mult = (int)HIWORD(wParam) / WHEEL_DELTA;
+		int scroll_mult = (int16_t)HIWORD(wParam) / (int16_t)WHEEL_DELTA;
 		MenuMouseScrollEvent(g_MenuState, scroll_mult);
 	} break;
+
 	case WM_KEYDOWN:
 	{
 #ifdef _DEBUG
@@ -82,7 +86,8 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, UINT wParam, LONG lPar
 	default:
 		return (DefWindowProc(hwnd, message, wParam, lParam));
 	}
-	return FALSE;
+
+	return false;
 }
 
 
@@ -95,11 +100,11 @@ bool CreateMainWindow()
 	wc.cbClsExtra = 0;
 	wc.cbWndExtra = 0;
 	wc.style = CS_OWNDC;
-	wc.lpfnWndProc = (WNDPROC)WindowProcedure;
+	wc.lpfnWndProc = WindowProcedure;
 	wc.hInstance = (HINSTANCE)hInst;
 	wc.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON1));
 	wc.hIconSm = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON1));
-	wc.hCursor = (HCURSOR)LoadCursor(NULL, IDC_ARROW);
+	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
 	wc.lpszMenuName = NULL;
 	wc.lpszClassName = "CarnivoresMenu2";
@@ -116,10 +121,10 @@ bool CreateMainWindow()
 		"Carnivores 2",
 		WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,// |  WS_POPUP,
 		0, 0, 800, 600,
-		NULL, NULL, (HINSTANCE)hInst, NULL
+		HWND_DESKTOP, 0, hInst, nullptr
 	);
 
-	if (!hwndMain) {
+	if (!IsWindow(hwndMain)) {
 		std::stringstream ss;
 		ss << "Failed to create the window, error code: " << std::hex << GetLastError() << std::endl;
 		throw std::runtime_error(ss.str());
@@ -159,6 +164,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		InitInterface();
 
 		LoadResourcesScript();
+		LoadResources();
 
 		// -- Message Loop
 		std::cout << "Entering Messages Loop." << std::endl;
@@ -187,10 +193,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	catch (std::runtime_error& e) {
 		std::cout << "! FATAL EXCEPTION: Runtime Error !" << std::endl;
 		std::cout << "A runtime_error exception has occurred, the reason is:\n" << e.what() << std::endl;
+		MessageBox(HWND_DESKTOP, "A fatal exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`", "Runtime Exception", MB_OK | MB_ICONERROR);
 	}
 	catch (std::exception& e) {
 		std::cout << "! FATAL EXCEPTION: C++ Standard Library !" << std::endl;
 		std::cout << "A C++ Standard Library exception has occurred, the reason is:\n" << e.what() << std::endl;
+		MessageBox(HWND_DESKTOP, "A fatal exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`", "C++ Exception", MB_OK | MB_ICONERROR);
 	}
 
 	ReleaseResources();

@@ -223,7 +223,7 @@ public:
 class Picture
 {
 public:
-	int32_t m_Width, m_Height;
+	int m_Width, m_Height;
 	uint16_t* m_Data;
 
 	Picture();
@@ -241,7 +241,7 @@ public:
 	std::string	m_FilePath; // Character file path
 	std::string	m_PicturePath; // Picture file path
 
-	int32_t m_Health0; // Base health
+	int32_t m_BaseHealth; // Base health
 	int32_t	m_AI; // AI index
 
 	bool m_DangerCall; // Dangerous lure call
@@ -253,11 +253,14 @@ public:
 	float m_HearK; // Audio Sensitivity
 	float m_LookK; // Visual Sensitivity
 	float m_ShDelta; // Height of ship hook from ground
-	int32_t m_Scale0; // Base Scale
+	int32_t m_BaseScale; // Base Scale
 	int32_t m_ScaleA; // Scale Variation
 	int32_t m_BaseScore; // Base score of creature
+	int32_t m_Price; // Credits cost
+	int32_t m_Rank; // Rank required
 
 	Picture m_CallIcon;	//<- Icon associated with this species
+	Picture m_Thumbnail;	//<- Menu thumbnail associated with this species
 };
 
 
@@ -279,7 +282,8 @@ public:
 	int32_t m_Fall; // Gravity on projectile during ray tracing (used for X-Bow)
 	int32_t m_TraceC; // Amount of projectiles per shot
 	int32_t m_Reload; // Shots before reload
-	int32_t	m_Price;
+	int32_t	m_Price; // Credits price
+	int32_t m_Rank; // Rank required
 };
 
 class AreaInfo
@@ -288,7 +292,9 @@ public:
 	std::string	m_Name; // Area Name
 	std::string	m_ProjectName; // MAP & RSC filename
 
-	int32_t m_Cost; // Credits cost
+	std::vector<std::string> m_Description;
+
+	int32_t m_Price; // Credits cost
 	int32_t m_Rank; // Rank required/recommended to play map
 
 	std::vector<int> m_DinosAvail; // A list of animal AI indexes that are available on this map.
@@ -298,8 +304,9 @@ public:
 	AreaInfo() :
 		m_Name(""),
 		m_ProjectName(""),
-		m_Cost(0),
-		m_Rank(RANK_NOVICE),
+		m_Description(),
+		m_Price(0),
+		m_Rank(RANK_BEGINNER),
 		m_DinosAvail(),
 		m_Thumbnail()
 	{
@@ -308,7 +315,8 @@ public:
 	AreaInfo(const AreaInfo& a) :
 		m_Name(a.m_Name),
 		m_ProjectName(a.m_ProjectName),
-		m_Cost(a.m_Cost),
+		m_Description(a.m_Description),
+		m_Price(a.m_Price),
 		m_Rank(a.m_Rank),
 		m_DinosAvail(a.m_DinosAvail),
 		m_Thumbnail(a.m_Thumbnail)
@@ -464,11 +472,14 @@ EXTERNAL uint32_t				g_GameState;
 EXTERNAL std::vector<DinoInfo>	g_DinoInfo;
 EXTERNAL std::vector<WeapInfo>	g_WeapInfo;
 EXTERNAL std::vector<AreaInfo>	g_AreaInfo;
+EXTERNAL std::vector<unsigned int> g_DinoList;
 EXTERNAL uint32_t				g_ProfileIndex;
 EXTERNAL uint32_t				g_HiliteProfileIndex;
+EXTERNAL uint32_t				g_StartCredits;
 EXTERNAL Profile				g_UserProfile;
 EXTERNAL ProfileShort			g_Profiles[10];
 EXTERNAL Options				g_Options;
+EXTERNAL Picture*				g_HuntSelectPic;
 
 EXTERNAL uint8_t                g_KeyboardState[256];
 
@@ -492,6 +503,7 @@ void MenuMouseScrollEvent(int32_t, int32_t);
 void ProcessMenu();
 
 /*** Resources ***/
+void LoadResources();
 void LoadResourcesScript();
 void ReleaseResources();
 void TrophyLoad(Profile& profile, int pr);

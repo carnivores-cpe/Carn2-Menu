@@ -22,21 +22,83 @@ void ReadWeapons(FILE*);
 void ReadCharacters(FILE*);
 
 
-void ReadWeapons(FILE *stream)
-{
-	char line[256], *value;
+/*
+! DEPRECATED !
+This function is deprecated and set for removal in future versions
+! WARNING !
+This is a kludge meant to support the original games method of loading resources via the _RES file.
 
-    while (fgets( line, 255, stream))
+Construct an AreaInfo object and return it with the correct information stored for use by the menu,
+this is a backwards compatability function to support the original vanilla _RES and file structure.
+*/
+AreaInfo MakeOldAreaInfo(int index, int price)
+{
+	std::stringstream ss;
+	AreaInfo a;
+
+	// Set the cost (required score) rank and the dinosaurs available
+	a.m_Price = price;
+	a.m_Rank = RANK_BEGINNER; // Not used in vanilla
+	a.m_DinosAvail.clear(); // Not used currently but empty would mean [all]
+
+	// Load the description
+	ss << "huntdat/menu/txt/area" << index << ".txt";
+	std::ifstream txt(ss.str());
+
+	if (txt.is_open())
+	{
+		while (!txt.eof())
+		{
+			std::string line = "";
+			std::getline(txt, line);
+			a.m_Description.push_back(line);
+		}
+		txt.close();
+	}
+	else
+	{
+		std::string txt_s = ss.str();
+		ss.str(""); ss.clear();
+		ss << "MakeOldAreaInfo(" << index << "," << price << ") -> Failed to open the description file: '" << txt_s << "'";
+		throw std::runtime_error(ss.str());
+		return a;
+	}
+
+	// Set the readable name
+	if (a.m_Description.size() > 0)
+		a.m_Name = a.m_Description[0];
+	else
+		a.m_Name = "(Unknown)";
+
+	// Set the project name (filename for .MAP and .RSC files)
+	ss.str(""); ss.clear();
+	ss << "area" << index;
+	a.m_ProjectName = ss.str();
+
+	// Load the map thumbnail
+	ss.str(""); ss.clear();
+	ss << "huntdat/menu/pics/area" << index << ".tga";
+	LoadPicture(a.m_Thumbnail, ss.str());
+
+	return a;
+}
+
+
+void ReadWeapons(FILE* stream)
+{
+	char line[256], * value;
+
+	while (fgets(line, 255, stream))
 	{
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
 			WeapInfo Blank;
-			g_WeapInfo.push_back( Blank );
+			g_WeapInfo.push_back(Blank);
 
-			while (fgets( line, 255, stream))
+			while (fgets(line, 255, stream))
 			{
-				size_t CurW = g_WeapInfo.size()-1;
+				size_t CurW = g_WeapInfo.size() - 1;
 
 				if (strstr(line, "}")) { break; }
 				value = strstr(line, "=");
@@ -44,30 +106,34 @@ void ReadWeapons(FILE *stream)
 				value++;
 
 				if (strstr(line, "power"))  g_WeapInfo[CurW].m_Power = (float)atof(value);
-				if (strstr(line, "prec"))   g_WeapInfo[CurW].m_Prec  = (float)atof(value);
-				if (strstr(line, "loud"))   g_WeapInfo[CurW].m_Loud  = (float)atof(value);
-				if (strstr(line, "rate"))   g_WeapInfo[CurW].m_Rate  = (float)atof(value);
-				if (strstr(line, "shots"))  g_WeapInfo[CurW].m_Shots =        atoi(value);
-				if (strstr(line, "reload")) g_WeapInfo[CurW].m_Reload=        atoi(value);
-				if (strstr(line, "trace"))  g_WeapInfo[CurW].m_TraceC=        atoi(value)-1;
+				if (strstr(line, "prec"))   g_WeapInfo[CurW].m_Prec = (float)atof(value);
+				if (strstr(line, "loud"))   g_WeapInfo[CurW].m_Loud = (float)atof(value);
+				if (strstr(line, "rate"))   g_WeapInfo[CurW].m_Rate = (float)atof(value);
+				if (strstr(line, "shots"))  g_WeapInfo[CurW].m_Shots = atoi(value);
+				if (strstr(line, "reload")) g_WeapInfo[CurW].m_Reload = atoi(value);
+				if (strstr(line, "trace"))  g_WeapInfo[CurW].m_TraceC = atoi(value) - 1;
 				if (strstr(line, "optic"))  g_WeapInfo[CurW].m_Optic = (float)atof(value);
-				if (strstr(line, "fall"))   g_WeapInfo[CurW].m_Fall  =        atoi(value);
-				if (strstr(line, "price"))	g_WeapInfo[CurW].m_Price =        atoi(value);
+				if (strstr(line, "fall"))   g_WeapInfo[CurW].m_Fall = atoi(value);
+				if (strstr(line, "price"))	g_WeapInfo[CurW].m_Price = atoi(value);
+				if (strstr(line, "rank"))	g_WeapInfo[CurW].m_Rank = atoi(value);
 
 				if (strstr(line, "name")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
-					g_WeapInfo[CurW].m_Name = &value[1]; }
+					value[strlen(value) - 2] = 0;
+					g_WeapInfo[CurW].m_Name = &value[1];
+				}
 
 				if (strstr(line, "file")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
-					g_WeapInfo[CurW].m_FilePath = &value[1]; }
+					value[strlen(value) - 2] = 0;
+					g_WeapInfo[CurW].m_FilePath = &value[1];
+				}
 
 				if (strstr(line, "pic")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
-					g_WeapInfo[CurW].m_BulletFilePath = &value[1];}
+					value[strlen(value) - 2] = 0;
+					g_WeapInfo[CurW].m_BulletFilePath = &value[1];
+				}
 			}
 		}
 
@@ -76,21 +142,21 @@ void ReadWeapons(FILE *stream)
 }
 
 
-void ReadCharacters(FILE *stream)
+void ReadCharacters(FILE* stream)
 {
-	char line[256], *value;
-    while (fgets( line, 255, stream))
+	char line[256], * value;
+	while (fgets(line, 255, stream))
 	{
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
 			DinoInfo di;
 
-			while (fgets( line, 255, stream))
+			while (fgets(line, 255, stream))
 			{
 				if (strstr(line, "}"))
 				{
-                    //AI_to_CIndex[DinoInfo[TotalC].AI] = TotalC;
+					//AI_to_CIndex[DinoInfo[TotalC].AI] = TotalC;
 					//TotalC++;
 					break;
 				}
@@ -100,30 +166,30 @@ void ReadCharacters(FILE *stream)
 					throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "mass"     )) di.m_Mass      = (float)atof(value);
-				if (strstr(line, "length"   )) di.m_Length    = (float)atof(value);
-				if (strstr(line, "radius"   )) di.m_Radius    = (float)atof(value);
-				if (strstr(line, "health"   )) di.m_Health0   = atoi(value);
+				if (strstr(line, "mass")) di.m_Mass = (float)atof(value);
+				if (strstr(line, "length")) di.m_Length = (float)atof(value);
+				if (strstr(line, "radius")) di.m_Radius = (float)atof(value);
+				if (strstr(line, "health")) di.m_BaseHealth = atoi(value);
 				if (strstr(line, "basescore")) di.m_BaseScore = atoi(value);
-				if (strstr(line, "ai"       )) di.m_AI        = atoi(value);
-				if (strstr(line, "smell"    )) di.m_SmellK    = (float)atof(value);
-				if (strstr(line, "hear"     )) di.m_HearK     = (float)atof(value);
-				if (strstr(line, "look"     )) di.m_LookK     = (float)atof(value);
+				if (strstr(line, "ai")) di.m_AI = atoi(value);
+				if (strstr(line, "smell")) di.m_SmellK = (float)atof(value);
+				if (strstr(line, "hear")) di.m_HearK = (float)atof(value);
+				if (strstr(line, "look")) di.m_LookK = (float)atof(value);
 				// -> Safety Check
-				if (strstr(line, "smellk"   )) di.m_SmellK    = (float)atof(value);
-				if (strstr(line, "heark"    )) di.m_HearK     = (float)atof(value);
-				if (strstr(line, "lookk"    )) di.m_LookK     = (float)atof(value);
+				if (strstr(line, "smellk")) di.m_SmellK = (float)atof(value);
+				if (strstr(line, "heark")) di.m_HearK = (float)atof(value);
+				if (strstr(line, "lookk")) di.m_LookK = (float)atof(value);
 				// <- End
-				if (strstr(line, "shipdelta")) di.m_ShDelta   = (float)atof(value);
-				if (strstr(line, "scale0"   )) di.m_Scale0    = atoi(value);
-				if (strstr(line, "scaleA"   )) di.m_ScaleA    = atoi(value);
-				if (strstr(line, "danger"   )) di.m_DangerCall= true;
+				if (strstr(line, "shipdelta")) di.m_ShDelta = (float)atof(value);
+				if (strstr(line, "scale0")) di.m_BaseScale = atoi(value);
+				if (strstr(line, "scaleA")) di.m_ScaleA = atoi(value);
+				if (strstr(line, "danger")) di.m_DangerCall = true;
 
 				if (strstr(line, "name"))
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
+					value[strlen(value) - 2] = 0;
 					di.m_Name = &value[1];
 				}
 
@@ -134,7 +200,7 @@ void ReadCharacters(FILE *stream)
 					sprintf(error, "The file value is integer %d", inc);
 					MessageBox(hwndMain, error, "Integer", MB_OK);*/
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
+					value[strlen(value) - 2] = 0;
 					di.m_FilePath = &value[1];
 				}
 
@@ -142,7 +208,7 @@ void ReadCharacters(FILE *stream)
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
+					value[strlen(value) - 2] = 0;
 					di.m_PicturePath = &value[1];
 				}
 			}
@@ -154,17 +220,17 @@ void ReadCharacters(FILE *stream)
 }
 
 
-void ReadAreas(FILE *stream)
+void ReadAreas(FILE* stream)
 {
-	char line[256], *value;
-    while (fgets( line, 255, stream))
+	char line[256], * value;
+	while (fgets(line, 255, stream))
 	{
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
 			AreaInfo area;
 
-			while (fgets( line, 255, stream))
+			while (fgets(line, 255, stream))
 			{
 				if (strstr(line, "}"))
 				{
@@ -176,21 +242,21 @@ void ReadAreas(FILE *stream)
 					throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "cost"   ))	area.m_Cost = atoi(value);
-				if (strstr(line, "rank"))		area.m_Rank = atoi(value);
+				if (strstr(line, "price")) area.m_Price = atoi(value);
+				if (strstr(line, "rank"))  area.m_Rank = atoi(value);
 
 				if (strstr(line, "name"))
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
+					value[strlen(value) - 2] = 0;
 					area.m_Name = &value[1];
 				}
 
 				if (strstr(line, "pname"))
 				{
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
+					value[strlen(value) - 2] = 0;
 					area.m_ProjectName = &value[1];
 				}
 
@@ -198,7 +264,7 @@ void ReadAreas(FILE *stream)
 				{
 					value = strstr(line, "'");
 					if (!value) throw std::runtime_error("Script loading error");
-					value[strlen(value)-2] = 0;
+					value[strlen(value) - 2] = 0;
 					///TODO: Load TPicture
 					//strcpy(area.Thumbnail, &value[1]);
 				}
@@ -211,33 +277,97 @@ void ReadAreas(FILE *stream)
 }
 
 
+void ReadPrices(FILE* stream)
+{
+	uint32_t CurA = 0;
+	uint32_t CurW = 0;
+	uint32_t CurD = 0;
+	uint32_t CurU = 0;
+	char line[256], * value;
+	int dummy = 0;
+
+	// Initialise the `CurD` variable to the first huntable index
+	for (uint32_t i = 0; i < g_DinoInfo.size(); i++)
+	{
+		if (g_DinoInfo.at(i).m_AI == 10)
+		{
+			CurD = i;
+			break;
+		}
+	}
+
+	while (fgets(line, 255, stream))
+	{
+		std::string line_str = line;
+		if (line_str.empty()) { continue; }
+		if (line_str.compare("\n") == 0) { continue; }
+		if (line_str.compare("\r\n") == 0) { continue; }
+
+		if (strstr(line, "}")) { break; }
+		value = strstr(line, "=");
+		if (!value) throw std::runtime_error("Script loading error: Expected assignment '='");
+		value++;
+
+		if (strstr(line, "start"))  g_StartCredits = (int)atoi(value);
+		if (strstr(line, "area")) {
+			g_AreaInfo.push_back(MakeOldAreaInfo(CurA + 1, (int)atoi(value)));
+			CurA++;
+		}
+		if (strstr(line, "dino")) {
+			g_DinoInfo[CurD].m_Price = (int)atoi(value);
+			CurD++;
+		}
+		if (strstr(line, "weapon")) {
+			g_WeapInfo[CurW].m_Price = (int)atoi(value);
+			CurW++;
+		}
+
+		if (strstr(line, "acces")) {
+			dummy = atoi(value);// We don't use this right now
+			CurU++;
+		}
+	}
+}
+
+
 void LoadResourcesScript()
 {
-    FILE *file;
+	FILE* file;
 	char line[256];
 
-	file = fopen("huntdat/_RES.TXT", "r");
+	// Initialise some things
+	g_StartCredits = 100; // Default
+
+
+	file = fopen("huntdat/_res.txt", "r");
 	if (!file) {
 		throw std::runtime_error("Can't open resources file _res.txt");
 		return;
 	}
 
-	while (fgets( line, 255, file))
+	while (fgets(line, 255, file))
 	{
 		if (line[0] == '.') break;			//endoffile EOF
-		if (strstr(line, "//") ) continue;	//comment
-		if (strstr(line, "#") ) continue;	//comment
-		if (strstr(line, "--") ) continue;	//comment
-		if (strstr(line, "~") ) continue;	//comment
-		if (strstr(line, "version") ) continue; //(todo) read version
-		if (strstr(line, "weapons") ) ReadWeapons(file);
-		if (strstr(line, "characters") ) ReadCharacters(file);
-		if (strstr(line, "dinosaurs") ) ReadCharacters(file);
-		if (strstr(line, "creatures") ) ReadCharacters(file);
-		if (strstr(line, "areas") ) ReadAreas(file);
+		if (strstr(line, "//")) continue;	//comment
+		if (strstr(line, "#")) continue;	//comment
+		if (strstr(line, "--")) continue;	//comment
+		if (strstr(line, "~")) continue;	//comment
+		//if (strstr(line, "version") ) continue; //(todo) read version
+		if (strstr(line, "weapons")) ReadWeapons(file);
+		if (strstr(line, "characters")) ReadCharacters(file);
+		//if (strstr(line, "dinosaurs") ) ReadCharacters(file);
+		//if (strstr(line, "creatures") ) ReadCharacters(file);
+		//if (strstr(line, "areas") ) ReadAreas(file);
+		if (strstr(line, "prices")) ReadPrices(file);
 	}
 
-	fclose (file);
+	fclose(file);
+}
+
+
+void LoadResources()
+{
+	//TODO use this and ignore old _RES stuff
 }
 
 
@@ -260,7 +390,9 @@ void TrophyLoad(Profile& profile, int pr)
 	std::ifstream fs(fname.str(), std::ios::binary);
 
 	if (!fs.is_open()) {
-		std::cout << "===> Error loading trophy!" << std::endl;
+		std::stringstream ss;
+		ss << "Unable to find the save file: " << fname.str();
+		throw std::runtime_error(ss.str());
 		return;
 	}
 
@@ -287,10 +419,9 @@ void TrophyLoad(Profile& profile, int pr)
 	fs.read((char*)&g_Options.SoundAPI, 4);
 	fs.read((char*)&g_Options.RenderAPI, 4);
 
-	//SetupRes();
+	// Append any data you want, the original games do not check the file size and stop reading at this point
 
-	//TrophyRoom.RegNumber = rn;
-	std::cout << "Trophy Loaded." << std::endl;
+	std::cout << "Profile Loaded." << std::endl;
 }
 
 
@@ -302,7 +433,7 @@ void TrophySave(Profile& profile)
 	std::ofstream fs(fname.str(), std::ios::binary | std::ios::trunc);
 
 	if (!fs.is_open()) {
-		std::cout << "===> Error saving trophy!" << std::endl;
+		std::cout << "Profile: Error saving trophy!" << std::endl;
 		return;
 	}
 
@@ -331,7 +462,7 @@ void TrophySave(Profile& profile)
 
 	// Append any data you want, the original games do not check the file size and stop reading at this point
 
-	std::cout << "Trophy Saved." << std::endl;
+	std::cout << "Profile Saved." << std::endl;
 }
 
 
@@ -407,8 +538,8 @@ void Profile::New(const std::string& name, int32_t index)
 	memset(Name, 0, 128);
 	memcpy(Name, name.data(), name.length());
 	RegNumber = index;
-	Score = 100; // TODO get this from _RES
-	Rank = 0;
+	Score = g_StartCredits;
+	Rank = RANK_BEGINNER;
 	memset(&Last, 0, sizeof(ProfileStats));
 	memset(&Total, 0, sizeof(ProfileStats));
 	memset(Body, 0, sizeof(TrophyItem) * 24);
