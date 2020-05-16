@@ -93,48 +93,52 @@ void ReadWeapons(FILE* stream)
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
-			WeapInfo Blank;
-			g_WeapInfo.push_back(Blank);
+			WeapInfo wi;
+
+			std::stringstream spp;
 
 			while (fgets(line, 255, stream))
 			{
-				size_t CurW = g_WeapInfo.size() - 1;
-
 				if (strstr(line, "}")) { break; }
 				value = strstr(line, "=");
 				if (!value) throw std::runtime_error("Script loading error");
 				value++;
 
-				if (strstr(line, "power"))  g_WeapInfo[CurW].m_Power = (float)atof(value);
-				if (strstr(line, "prec"))   g_WeapInfo[CurW].m_Prec = (float)atof(value);
-				if (strstr(line, "loud"))   g_WeapInfo[CurW].m_Loud = (float)atof(value);
-				if (strstr(line, "rate"))   g_WeapInfo[CurW].m_Rate = (float)atof(value);
-				if (strstr(line, "shots"))  g_WeapInfo[CurW].m_Shots = atoi(value);
-				if (strstr(line, "reload")) g_WeapInfo[CurW].m_Reload = atoi(value);
-				if (strstr(line, "trace"))  g_WeapInfo[CurW].m_TraceC = atoi(value) - 1;
-				if (strstr(line, "optic"))  g_WeapInfo[CurW].m_Optic = (float)atof(value);
-				if (strstr(line, "fall"))   g_WeapInfo[CurW].m_Fall = atoi(value);
-				if (strstr(line, "price"))	g_WeapInfo[CurW].m_Price = atoi(value);
-				if (strstr(line, "rank"))	g_WeapInfo[CurW].m_Rank = atoi(value);
+				if (strstr(line, "power"))  wi.m_Power = (float)atof(value);
+				if (strstr(line, "prec"))   wi.m_Prec = (float)atof(value);
+				if (strstr(line, "loud"))   wi.m_Loud = (float)atof(value);
+				if (strstr(line, "rate"))   wi.m_Rate = (float)atof(value);
+				if (strstr(line, "shots"))  wi.m_Shots = atoi(value);
+				if (strstr(line, "reload")) wi.m_Reload = atoi(value);
+				if (strstr(line, "trace"))  wi.m_TraceC = atoi(value) - 1;
+				if (strstr(line, "optic"))  wi.m_Optic = (float)atof(value);
+				if (strstr(line, "fall"))   wi.m_Fall = atoi(value);
+				if (strstr(line, "price"))	wi.m_Price = atoi(value);
+				if (strstr(line, "rank"))	wi.m_Rank = atoi(value);
 
 				if (strstr(line, "name")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value) - 2] = 0;
-					g_WeapInfo[CurW].m_Name = &value[1];
+					wi.m_Name = &value[1];
 				}
 
 				if (strstr(line, "file")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value) - 2] = 0;
-					g_WeapInfo[CurW].m_FilePath = &value[1];
+					wi.m_FilePath = &value[1];
 				}
 
 				if (strstr(line, "pic")) {
 					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value) - 2] = 0;
-					g_WeapInfo[CurW].m_BulletFilePath = &value[1];
+					wi.m_BulletFilePath = &value[1];
 				}
 			}
+
+			spp << "huntdat/menu/pics/weapon" << (g_WeapInfo.size() + 1) << ".tga";
+			LoadPicture(wi.m_Thumbnail, spp.str());
+
+			g_WeapInfo.push_back(wi);
 		}
 
 	}
@@ -211,6 +215,13 @@ void ReadCharacters(FILE* stream)
 					value[strlen(value) - 2] = 0;
 					di.m_PicturePath = &value[1];
 				}
+			}
+
+			if (di.m_AI >= 10)
+			{
+				std::stringstream spp;
+				spp << "huntdat/menu/pics/dino" << (di.m_AI - 9) << ".tga";
+				LoadPicture(di.m_Thumbnail, spp.str());
 			}
 
 			g_DinoInfo.push_back(di);
@@ -338,7 +349,6 @@ void LoadResourcesScript()
 	// Initialise some things
 	g_StartCredits = 100; // Default
 
-
 	file = fopen("huntdat/_res.txt", "r");
 	if (!file) {
 		throw std::runtime_error("Can't open resources file _res.txt");
@@ -348,16 +358,12 @@ void LoadResourcesScript()
 	while (fgets(line, 255, file))
 	{
 		if (line[0] == '.') break;			//endoffile EOF
-		if (strstr(line, "//")) continue;	//comment
-		if (strstr(line, "#")) continue;	//comment
-		if (strstr(line, "--")) continue;	//comment
-		if (strstr(line, "~")) continue;	//comment
-		//if (strstr(line, "version") ) continue; //(todo) read version
+		if (line[0] == '#') continue;	//comment
+		if (line[0] == ';') continue;	//comment
+		//if (strstr(line, "version") ) continue; //TODO: read version
 		if (strstr(line, "weapons")) ReadWeapons(file);
 		if (strstr(line, "characters")) ReadCharacters(file);
-		//if (strstr(line, "dinosaurs") ) ReadCharacters(file);
-		//if (strstr(line, "creatures") ) ReadCharacters(file);
-		//if (strstr(line, "areas") ) ReadAreas(file);
+		//if (strstr(line, "areas") ) ReadAreas(file); //TODO: Add areas section to _RES
 		if (strstr(line, "prices")) ReadPrices(file);
 	}
 
@@ -368,6 +374,47 @@ void LoadResourcesScript()
 void LoadResources()
 {
 	//TODO use this and ignore old _RES stuff
+
+	// TODO: enable these and use them instead of GDI drawing for the trackbars
+	//LoadPicture(g_TrackBar[0], "huntdat/menu/sl_bar.tga");
+	//LoadPicture(g_TrackBar[1], "huntdat/menu/sl_but.tga");
+
+	UtilInfo ui;
+	ui.m_Name = "Camoflauge";
+	ui.m_Description = LoadText("huntdat/menu/txt/camoflag.nfo");
+	ui.m_Command = "";
+	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip1.tga");
+	g_UtilInfo.push_back(ui);
+
+	ui.m_Name = "GPS Radar";
+	ui.m_Description = LoadText("huntdat/menu/txt/radar.nfo");
+	ui.m_Command = "-radar";
+	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip2.tga");
+	g_UtilInfo.push_back(ui);
+
+	ui.m_Name = "Cover Scent";
+	ui.m_Description = LoadText("huntdat/menu/txt/scent.nfo");
+	ui.m_Command = "";
+	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip3.tga");
+	g_UtilInfo.push_back(ui);
+
+	ui.m_Name = "Double Ammo";
+	ui.m_Description = LoadText("huntdat/menu/txt/double.nfo");
+	ui.m_Command = "";
+	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip4.tga");
+	g_UtilInfo.push_back(ui);
+
+#ifdef _iceage
+	ui.m_Name = "Ammo Resupply";
+	ui.m_Description = LoadText("huntdat/menu/txt/supply.nfo");
+	ui.m_Command = "";
+	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip5.tga");
+	g_UtilInfo.push_back(ui);
+#endif //_iceage
+
+	LoadWave(g_MenuSound_Go, "huntdat/soundfx/menugo.wav");
+	LoadWave(g_MenuSound_Ambient, "huntdat/soundfx/menuamb.wav");
+	LoadWave(g_MenuSound_Move, "huntdat/soundfx/menumov.wav");
 }
 
 
@@ -396,11 +443,34 @@ void TrophyLoad(Profile& profile, int pr)
 		return;
 	}
 
+	// Check version
+	fs.seekg(0, std::ios::end);
+	auto file_size = fs.tellg();
+
+#ifdef _iceage
+	if (file_size != 1664)
+	{
+		ShowErrorMessage("Not a compatible Carnivores: Ice Age save file!");
+		fs.close();
+		return;
+	}
+#else
+	if (file_size != 1660)
+	{
+		ShowErrorMessage("Not a compatible Carnivores 2 save file!");
+		fs.close();
+		return;
+	}
+#endif
+
+	fs.seekg(0, std::ios::beg);
+
 	fs.read((char*)&profile, sizeof(Profile));
 
 	fs.read((char*)&g_Options.Aggression, 4);
 	fs.read((char*)&g_Options.Density, 4);
 	fs.read((char*)&g_Options.Sensitivity, 4);
+
 	fs.read((char*)&g_Options.Resolution, 4);
 	fs.read((char*)&g_Options.Fog, 4);
 	fs.read((char*)&g_Options.Textures, 4);
@@ -408,13 +478,16 @@ void TrophyLoad(Profile& profile, int pr)
 	fs.read((char*)&g_Options.Shadows, 4);
 	fs.read((char*)&g_Options.MouseSensitivity, 4);
 	fs.read((char*)&g_Options.Brightness, 4);
+
 	fs.read((char*)&g_Options.KeyMap, sizeof(TKeyMap));
 	fs.read((char*)&g_Options.MouseInvert, 4);
+
 	fs.read((char*)&g_Options.ScentMode, 4);
 	fs.read((char*)&g_Options.CamoMode, 4);
 	fs.read((char*)&g_Options.RadarMode, 4);
 	fs.read((char*)&g_Options.TranqMode, 4);
 	fs.read((char*)&g_Options.AlphaColorKey, 4);
+
 	fs.read((char*)&g_Options.OptSys, 4);
 	fs.read((char*)&g_Options.SoundAPI, 4);
 	fs.read((char*)&g_Options.RenderAPI, 4);
@@ -460,7 +533,11 @@ void TrophySave(Profile& profile)
 	fs.write((char*)&g_Options.SoundAPI, 4);
 	fs.write((char*)&g_Options.RenderAPI, 4);
 
-	// Append any data you want, the original games do not check the file size and stop reading at this point
+	/*
+	You can append any data you want to once you remove the check for file size I added,
+	in the TrophyLoad(...) function.
+	The original games do not check the file size and stop reading at this point
+	*/
 
 	std::cout << "Profile Saved." << std::endl;
 }
@@ -519,6 +596,71 @@ void LoadPicture(Picture& pic, const std::string& fpath)
 }
 
 
+std::vector<std::string> LoadText(const std::string& path)
+{
+	std::vector<std::string> txt;
+	std::ifstream tf(path);
+
+	if (tf.is_open())
+	{
+		while (!tf.eof())
+		{
+			std::string line = "";
+			std::getline(tf, line);
+			txt.push_back(line);
+		}
+		tf.close();
+	}
+	else
+	{
+		std::cout << "LoadText() : Unable to open text file for reading: '" << path << "'" << std::endl;
+	}
+
+	return txt;
+}
+
+
+bool LoadWave(SoundFX& sfx, const std::string& path)
+{
+	std::ifstream tf(path, std::ios::binary);
+
+	if (tf.is_open())
+	{
+		tf.seekg(36);
+
+		char c[5]; c[4] = 0;
+
+		while (true)
+		{
+			c[0] = tf.get();
+			if (c[0] == 'd')
+			{
+				tf.read(&c[1], 3);
+				if (!std::string(c).compare("data")) break;
+				else tf.seekg(-3, std::ios::cur);
+			}
+		}
+		
+		tf.read((char*)&sfx.m_Length, 4);
+
+		if (sfx.m_Data)
+			delete[] sfx.m_Data;
+
+		sfx.m_Data = new int16_t[sfx.m_Length / sizeof(int16_t)];
+		tf.read((char*)sfx.m_Data, sfx.m_Length);
+
+		tf.close();
+		return true;
+	}
+	else
+	{
+		std::cout << "LoadWave() : Unable to open .wav file for reading: '" << path << "'" << std::endl;
+	}
+
+	return false;
+}
+
+
 void TrophyDelete(uint32_t trophy_index)
 {
 	std::stringstream fname;
@@ -574,15 +716,9 @@ void Options::Default()
 	this->KeyMap.fkDown = VK_DOWN;
 	this->KeyMap.fkLeft = VK_LEFT;
 	this->KeyMap.fkRight = VK_RIGHT;
-	/* Taken from the RH Carnivores 2 3.x.x patches
-	this->KeyMap.fkMenu		= VK_ESCAPE;
-	this->KeyMap.fkMap		= VK_TAB;
-	this->KeyMap.fkNightVision= 'N';
-	this->KeyMap.fkReload		= 'R';
-	this->KeyMap.fkZoomIn		= VK_ADD;
-	this->KeyMap.fkZoomOut	= VK_SUBTRACT;
-	this->KeyMap.fkConsole	= 126; // Tilde '~'
-	*/
+#ifdef _iceage
+	this->KeyMap.fkSupply = 'O';
+#endif //_iceage
 	this->MouseInvert = false;
 	this->ScentMode = false;
 	this->CamoMode = false;

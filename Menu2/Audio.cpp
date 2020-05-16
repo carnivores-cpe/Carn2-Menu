@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -9,6 +10,8 @@
 #define req_versionL 0x0002
 
 HINSTANCE hAudioDLL = nullptr;
+HANDLE hAudioLog = nullptr;
+int iAudioDriver = 0;
 
 typedef void (WINAPI * LPFUNC1)(void);
 typedef void (WINAPI * LPFUNC2)(HWND, HANDLE);
@@ -20,31 +23,61 @@ typedef void (WINAPI * LPFUNC6)(int, short int*, float, float, float, int);
 typedef int  (WINAPI * LPFUNC7)(void);
 typedef void (WINAPI * LPFUNC8)(int, float);
 
-LPFUNC1 audio_restore;
-LPFUNC1 audiostop;
-LPFUNC1 audio_shutdown;
+LPFUNC1 audio_restore = nullptr;
+LPFUNC1 audiostop = nullptr;
+LPFUNC1 audio_shutdown = nullptr;
 
-LPFUNC2 initaudiosystem;
-LPFUNC3 audiosetcamerapos;
-LPFUNC4 setambient;
-LPFUNC5 setambient3d;
-LPFUNC6 addvoice3dv;
-LPFUNC7 audio_getversion;
-LPFUNC8 audio_setenvironment;
+LPFUNC2 initaudiosystem = nullptr;
+LPFUNC3 audiosetcamerapos = nullptr;
+LPFUNC4 setambient = nullptr;
+LPFUNC5 setambient3d = nullptr;
+LPFUNC6 addvoice3dv = nullptr;
+LPFUNC7 audio_getversion = nullptr;
+LPFUNC8 audio_setenvironment = nullptr;
+
+
+void PrintLog(const std::string &l)
+{
+	DWORD w;
+
+	if (l.at(l.size() - 1) == 0x0A) {
+		uint8_t b = 0x0D;
+		WriteFile(hAudioLog, l.c_str(), l.size() - 1, &w, NULL);
+		WriteFile(hAudioLog, &b, 1, &w, NULL);
+		b = 0x0A;
+		WriteFile(hAudioLog, &b, 1, &w, NULL);
+	}
+	else
+		WriteFile(hAudioLog, l.c_str(), l.size(), &w, NULL);
+
+}
 
 
 void Audio_Shutdown()
 {
 	if (audio_shutdown) audio_shutdown();
-	if (hAudioDLL)  	FreeLibrary(hAudioDLL);
+	if (hAudioDLL) FreeLibrary(hAudioDLL);
+	if (hAudioLog) CloseHandle(hAudioLog);
 	hAudioDLL = nullptr;
+
+	audio_restore = nullptr;
+	audiostop = nullptr;
 	audio_shutdown = nullptr;
+	initaudiosystem = nullptr;
+	audiosetcamerapos = nullptr;
+	setambient = nullptr;
+	setambient3d = nullptr;
+	addvoice3dv = nullptr;
+	audio_getversion = nullptr;
+	audio_setenvironment = nullptr;
 }
 
 
 void InitAudioSystem(HWND hw, HANDLE hlog, int  driver)
 {
 	Audio_Shutdown();
+
+	iAudioDriver = driver;
 
 	switch (driver)
 	{
@@ -106,13 +139,36 @@ void InitAudioSystem(HWND hw, HANDLE hlog, int  driver)
 	if ( (v1!=req_versionH) || (v2<req_versionL) )
 		throw std::runtime_error("Incorrect audio driver version.");
 
+	if (hlog == NULL) {
+		hAudioLog = CreateFile("audio.log",
+			GENERIC_WRITE,
+			FILE_SHARE_READ, NULL,
+			CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+		hlog = hAudioLog;
+
+		if (driver == 0)
+			PrintLog("CarnivoresII Software audio driver.\n");
+		if (driver == 1)
+			PrintLog("CarnivoresII DirectSound 3D audio driver.\n");
+		if (driver == 2)
+			PrintLog("CarnivoresII Aureal 3D audio driver.\n");
+		if (driver == 3)
+			PrintLog("CarnivoresII EAX audio driver.\n");
+		if (driver == 4)
+			PrintLog("CarnivoresII OpenAL audio driver.\n");
+
+		std::stringstream ss;
+		ss << " Version " << (audio_getversion() >> 16) << "." << (audio_getversion() & 0xFFFF) << ". Sep.24 1999.\n";
+		PrintLog(ss.str());
+	}
+
 	initaudiosystem(hw, hlog);
 }
 
 
 void AudioStop()
 {
-    if(audiostop) // alacn
+    if(audiostop)
 		audiostop();
 }
 
@@ -126,30 +182,35 @@ void Audio_Restore()
 
 void AudioSetCameraPos(float cx, float cy, float cz, float ca, float cb)
 {
-	audiosetcamerapos(cx, cy, cz, ca, cb);
+	if (audiosetcamerapos)
+		audiosetcamerapos(cx, cy, cz, ca, cb);
 }
 
 
 void Audio_SetEnvironment(int e, float f)
 {
-   audio_setenvironment(e, f);
+	if (audio_setenvironment)
+	   audio_setenvironment(e, f);
 }
 
 void SetAmbient(int length, short int* lpdata, int av)
 {
-	setambient(length, lpdata, av);
+	if (setambient)
+		setambient(length, lpdata, av);
 }
 
 
 void SetAmbient3d(int length, short int* lpdata, float cx, float cy, float cz)
 {
-	setambient3d(length, lpdata, cx, cy, cz);
+	if (setambient3d)
+		setambient3d(length, lpdata, cx, cy, cz);
 }
 
 
 void AddVoice3dv(int length, short int* lpdata, float cx, float cy, float cz, int vol)
 {
-	addvoice3dv(length, lpdata, cx, cy, cz, vol);
+	if (addvoice3dv)
+		addvoice3dv(length, lpdata, cx, cy, cz, vol);
 }
 
 

@@ -18,10 +18,10 @@
 
 class MenuSet {
 public:
-	int			x0, y0;
-	int			Count;
-	int			Offset;
-	std::vector<std::string> Item;
+	int32_t		x0, y0;
+	uint32_t	Count;
+	uint32_t	Offset;
+	std::vector<std::pair<std::string, bool>> Item;
 	int32_t		Selected;
 	int32_t		Hilite;
 	RECT		Rect;
@@ -77,6 +77,7 @@ bool g_KeyboardUsed = false;
 
 
 // String table
+const char g_GitHubURL[] = "https://github.com/carnivores-cpe/Carn2-Menu";
 const char st_BoolText[2][4] = { "Off", "On" };
 const char st_UnitText[2][10] = { "Metric", "Imperial" };
 const char st_HMLText[4][8] = { "Low", "Medium", "High", "Ultra" };
@@ -84,6 +85,8 @@ const char st_TextureText[3][5] = { "Low", "High", "Auto" };
 const char st_AlphaKeyText[2][14] = { "Color Key", "Alpha Channel" };
 const char st_RenText[4][11] = { "Software", "3Dfx Glide", "Direct3D 7", "OpenGL" };
 const char st_AudText[5][16] = { "Software", "Direct Sound 3D", "Aureal 3D", "EAX", "OpenAL" };
+
+const char g_RendererFile[4][7] = { "v_soft", "v_3dfx", "v_d3d", "v_gl" };
 
 
 bool IsPointInRect(POINT& p, RECT& rc)
@@ -170,8 +173,110 @@ int MapVKKey(int k)
 
 void MenuSet::AddItem(const std::string& txt)
 {
-	this->Item.push_back(txt);
+	this->Item.push_back(std::make_pair(txt, false));
 	this->Count = this->Item.size();
+}
+
+
+int32_t CalculateDebit()
+{
+	int32_t debit = 0;
+
+	debit += g_AreaInfo[MenuHunt[0].Selected].m_Price;
+
+	for (unsigned i = 0; i < MenuHunt[1].Item.size(); i++)
+	{
+		if (MenuHunt[1].Item[i].second)
+		{
+			debit += g_DinoInfo[g_DinoList[i]].m_Price;
+		}
+	}
+
+	for (unsigned i = 0; i < MenuHunt[2].Item.size(); i++)
+	{
+		if (MenuHunt[2].Item[i].second)
+		{
+			debit += g_WeapInfo[i].m_Price;
+		}
+	}
+
+	// TODO: Accessories
+
+	return debit;
+}
+
+
+void CALLBACK WaveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+{
+
+}
+
+
+void AudioSoftThread()
+{
+	HWAVEOUT hwo;
+	WAVEOUTCAPS woc;
+	WAVEFORMATEX wfx;
+	unsigned device = WAVE_MAPPER;
+
+	wfx.cbSize = 0;
+	wfx.wFormatTag = WAVE_FORMAT_PCM;
+	wfx.nChannels = 1;
+	wfx.nSamplesPerSec = 22050;
+	wfx.nBlockAlign = 2;
+	wfx.wBitsPerSample = 16;
+	wfx.nAvgBytesPerSec = wfx.nSamplesPerSec * wfx.nBlockAlign;
+
+	std::cout << "Audio: Checking " << waveInGetNumDevs() << " devices for wave out support..." << std::endl;
+	for (unsigned i = 0; i < waveInGetNumDevs(); i++)
+		if (waveOutOpen(&hwo, i, &wfx, NULL, NULL, CALLBACK_EVENT | WAVE_FORMAT_QUERY) == MMSYSERR_NOERROR)
+		{
+			device = i;
+
+			std::cout << "WaveOut Device ID: " << device << std::endl;
+			std::cout << std::setw(20) << std::setfill('=') << "=" << std::endl;
+
+			waveOutGetDevCaps(device, &woc, sizeof(WAVEOUTCAPS));
+			std::cout << "Manufacturer ID: " << woc.wMid << std::endl;
+			std::cout << "Product ID: " << woc.wPid << std::endl;
+			std::cout << "Driver Version: " << (HIWORD(woc.vDriverVersion)) << "." << (LOWORD(woc.vDriverVersion)) << std::endl;
+			std::cout << "Product Name: " << woc.szPname << std::endl;
+			std::cout << "Channels: " << woc.wChannels << std::endl;
+
+			std::cout << "Supported formats:" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_2M08)
+				std::cout << "\t22.05 kHz Mono 8-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_2M16)
+				std::cout << "\t22.05 kHz Mono 16-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_2M08)
+				std::cout << "\t22.05 kHz Stereo 8-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_2M16)
+				std::cout << "\t22.05 kHz Stereo 16-bit" << std::endl;
+
+			std::cout << "Supported functionality:" << std::endl;
+			if (woc.dwSupport & WAVECAPS_LRVOLUME)
+				std::cout << "\tSeparate left and right volume control." << std::endl;
+			if (woc.dwSupport & WAVECAPS_PITCH)
+				std::cout << "\tPitch control" << std::endl;
+			if (woc.dwSupport & WAVECAPS_PLAYBACKRATE)
+				std::cout << "\tPlayback rate control" << std::endl;
+			if (woc.dwSupport & WAVECAPS_SYNC)
+				std::cout << "\tDriver is synchronous" << std::endl;
+			if (woc.dwSupport & WAVECAPS_VOLUME)
+				std::cout << "\tVolume control" << std::endl;
+			if (woc.dwSupport & WAVECAPS_SAMPLEACCURATE)
+				std::cout << "\tSample-accurate position" << std::endl;
+
+			break;
+		}
+
+	if (waveOutOpen(&hwo, device, &wfx, NULL, (DWORD_PTR)&WaveOutProc, CALLBACK_FUNCTION | WAVE_FORMAT_QUERY) != MMSYSERR_NOERROR)
+	{
+		std::cout << "Audio: Failed to open WaveOut device!" << std::endl;
+		return;
+	}
+
+	waveOutClose(hwo);
 }
 
 
@@ -274,7 +379,7 @@ void InitInterface()
 	MenuOptions[m].AddItem("View range");
 	MenuOptions[m].AddItem("Measurement");
 	MenuOptions[m].AddItem("Sound API");
-	MenuOptions[m].Rect = { 40, 75, 380, 75 + (MenuOptions[0].Count * 24) };
+	MenuOptions[m].Rect = { 40, 75, 380, 75 + static_cast<long>(MenuOptions[0].Count * 24) };
 
 	m = OPT_KEYBINDINGS;
 	MenuOptions[m].x0 = 422;
@@ -298,10 +403,12 @@ void InitInterface()
 	MenuOptions[m].AddItem("Lure Call");
 	MenuOptions[m].AddItem("Change Call");
 	MenuOptions[m].AddItem("Binoculars");
+#ifdef _iceage
 	MenuOptions[m].AddItem("Call Resupply");
+#endif //_iceage
 	MenuOptions[m].AddItem("Invert Mouse");
 	MenuOptions[m].AddItem("Mouse sensitivity");
-	MenuOptions[m].Rect = { 422, 75, 760, 75 + (MenuOptions[1].Count * 24) };
+	MenuOptions[m].Rect = { 422, 75, 760, 75 + static_cast<long>(MenuOptions[1].Count * 24) };
 
 	m = OPT_VIDEO;
 	MenuOptions[m].x0 = 70;
@@ -315,7 +422,7 @@ void InitInterface()
 	MenuOptions[m].AddItem("Textures");
 	MenuOptions[m].AddItem("Alpha Source");
 	MenuOptions[m].AddItem("Brightness");
-	MenuOptions[m].Rect = { 40, 350, 380, 350 + (MenuOptions[2].Count * 24) };
+	MenuOptions[m].Rect = { 40, 350, 380, 350 + static_cast<long>(MenuOptions[2].Count * 24) };
 
 	/************************************************************
 	* Hunt lists
@@ -357,19 +464,25 @@ void InitInterface()
 	MenuHunt[m].AddItem("Cover Scent");
 	MenuHunt[m].AddItem("Radar");
 	MenuHunt[m].AddItem("Double Ammo");
+#ifdef _iceage
 	MenuHunt[m].AddItem("Ammo Resupply");
+#endif //_iceage
 	MenuHunt[m].Rect = { 610, 382, 790, 542 };
 
-	// TODO: enable these and use them instead of GDI drawing for the trackbars
-	//LoadPicture(g_TrackBar[0], "huntdat/menu/sl_bar.tga");
-	//LoadPicture(g_TrackBar[1], "huntdat/menu/sl_but.tga");
-
 	std::cout << "Interface: Initialisation Ok!" << std::endl;
+
+	/*if (true)
+	{
+		std::thread audio_thread(AudioSoftThread);
+		audio_thread.join();
+	}*/
 }
 
 
 void ShutdownInterface()
 {
+	//PlaySound(NULL, NULL, SND_NODEFAULT);
+
 	if (bmpMain)
 		DeleteObject((HBITMAP)bmpMain);
 	if (hdcCMain)
@@ -582,9 +695,39 @@ void DrawTextShadow(int x, int y, const std::string& text, uint32_t color, int a
 	}
 
 	DrawTextColor(x + 1, y + 1, text, RGB(0, 0, 0));
-	//DrawTextColor(x + 1, y, text, RGB(0, 0, 0));
-	//DrawTextColor(x, y + 1, text, RGB(0, 0, 0));
 	DrawTextColor(x, y, text, color);
+}
+
+
+void DrawURLShadow(int x, int y, const std::string& text, uint32_t color, int align = DTA_LEFT)
+{
+	int W = GetTextW(hdcCMain, text);
+	int H = GetTextH(hdcCMain, text);
+
+	if (align == DTA_RIGHT)
+	{
+		x -= W;
+	}
+
+	RECT rc = { x, y, x + W, y + H };
+
+	if (IsPointInRect(g_CursorPos, rc))
+	{
+		color = RGB(244, 10, 10);
+	}
+
+	HPEN wp = CreatePen(PS_SOLID, 0, color);
+	HPEN oldpen = (HPEN)SelectObject(hdcCMain, GetStockObject(BLACK_PEN));
+
+	DrawTextColor(x + 1, y + 1, text, 0x000000);
+	_Line(hdcCMain, x + 1, y + H + 1, x + W + 1, y + H + 1);
+
+	SelectObject(hdcCMain, wp);
+
+	DrawTextColor(x, y, text, color);
+	_Line(hdcCMain, x, y + H, x + W, y + H);
+
+	SelectObject(hdcCMain, oldpen);
 }
 
 
@@ -660,13 +803,22 @@ void MenuEventStart(int32_t menu_state)
 	} break;
 	case MENU_HUNT:
 	{
+		for (int i = 1; i <= 3; i++)
+			g_MenuItem.SetIsElementSet(i, false);
+
+		g_MenuItem.SetIsElementSet(g_TimeOfDay + 1, true);
+
+		g_MenuItem.SetIsElementSet(4, false);
+		g_MenuItem.SetIsElementSet(5, g_Options.TranqMode);
+		g_MenuItem.SetIsElementSet(6, g_ObserverMode);
+
 		for (int i = 0; i < 4; i++)
 			MenuHunt[i].Offset = 0;
 
 		MenuHunt[0].Item.clear();
 		for (unsigned int i = 0; i < g_AreaInfo.size(); i++)
 		{
-			MenuHunt[0].Item.push_back(g_AreaInfo[i].m_Name);
+			MenuHunt[0].Item.push_back(std::make_pair(g_AreaInfo[i].m_Name, false));
 		}
 		MenuHunt[0].Count = g_AreaInfo.size();
 
@@ -680,7 +832,7 @@ void MenuEventStart(int32_t menu_state)
 			{
 				// Add to a list
 				g_DinoList.push_back(i);
-				MenuHunt[1].Item.push_back(g_DinoInfo[i].m_Name);
+				MenuHunt[1].Item.push_back(std::make_pair(g_DinoInfo[i].m_Name, false));
 			}
 		}
 		MenuHunt[1].Count = g_AreaInfo.size();
@@ -688,7 +840,7 @@ void MenuEventStart(int32_t menu_state)
 		MenuHunt[2].Item.clear();
 		for (unsigned int i = 0; i < g_WeapInfo.size(); i++)
 		{
-			MenuHunt[2].Item.push_back(g_WeapInfo[i].m_Name);
+			MenuHunt[2].Item.push_back(std::make_pair(g_WeapInfo[i].m_Name, false));
 		}
 		MenuHunt[2].Count = g_WeapInfo.size();
 
@@ -696,6 +848,23 @@ void MenuEventStart(int32_t menu_state)
 		In the _RES they can have a string that defines the command line toggle to send to
 		the .REN executable, such as '-camo' for camoflauge, or whatever custom accessory
 		the modded .REN allows for. */
+
+		// Reset the states
+		for (int m = 0; m < 4; m++)
+		{
+			MenuHunt[m].Selected = -1;
+			for (auto i = MenuHunt[m].Item.begin(); i != MenuHunt[m].Item.end(); i++)
+			{
+				i->second = false;
+			}
+		}
+
+		if (!g_AreaInfo.empty())
+		{
+			MenuHunt[0].Selected = 0;
+		}
+
+		g_ScoreDebit = CalculateDebit();
 	} break;
 	}
 }
@@ -806,7 +975,7 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 	startupInfo.cb = sizeof(startupInfo);
 	uint32_t exitCode = 0;
 
-	ShowWindow(hwndMain, SW_HIDE);
+	ShowWindow(hwndMain, SW_MINIMIZE);
 
 	// Create the process
 	BOOL result = CreateProcess(exe_name.c_str(), const_cast<char*>(cmd_line.c_str()),
@@ -817,7 +986,7 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 	// Successfully created the process.  Wait for it to finish.
 	WaitForSingleObject(processInformation.hProcess, INFINITE);
 
-	ShowWindow(hwndMain, SW_SHOW);
+	ShowWindow(hwndMain, SW_RESTORE);
 
 	// Get the exit code.
 	result = GetExitCodeProcess(processInformation.hProcess, (DWORD*)&exitCode);
@@ -828,7 +997,6 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 
 	// Reset to the main menu like the original game does
 	ChangeMenuState(MENU_MAIN);
-	LoadGameMenu(g_MenuState);
 
 	return exitCode;
 }
@@ -871,7 +1039,7 @@ void DrawMenuStatistics()
 	int c = RGB(239, 228, 176);
 
 	InterfaceSetFont(fnt_Midd);
-	//int  ttm = (int)g_UserProfile.Total.time;
+	int  ttm = (int)g_UserProfile.Total.time;
 	int  ltm = (int)g_UserProfile.Last.time;
 
 	DrawTextShadow(718 - GetTextW(hdcCMain, "Path travelled  "), 78, "Path travelled  ", c);
@@ -898,16 +1066,50 @@ void DrawMenuStatistics()
 
 	int accuracy = 0;
 	if (g_UserProfile.Last.success > 0)
-		accuracy = ((g_UserProfile.Last.smade / g_UserProfile.Last.success) * 100);
+		accuracy = ((g_UserProfile.Last.success / g_UserProfile.Last.smade) * 100);
 
 	DrawTextShadow(718 - GetTextW(hdcCMain, "Accuracy  "), 138, "Accuracy  ", c);
 	ss << accuracy << "%";
 	DrawTextShadow(718, 138, ss.str(), c);
 	ss.str(""); ss.clear();
 
-	// TODO: implement total stats
+	/************************** TOTAL STATS **************************/
 
-	InterfaceSetFont(NULL);
+	DrawTextShadow(718 - GetTextW(hdcCMain, "Path travelled  "), 208, "Path travelled  ", c);
+
+	if (g_UserProfile.Total.path < 1000)
+	{
+		if (g_Options.OptSys) ss << std::setprecision(4) << (g_UserProfile.Total.path / 0.3f) << " ft.";
+		else                  ss << std::setprecision(4) << (g_UserProfile.Total.path) << " m.";
+	}
+	else
+	{
+		if (g_Options.OptSys) ss << std::setprecision(4) << (g_UserProfile.Total.path / 1667.f) << " miles.";
+		else                  ss << std::setprecision(4) << (g_UserProfile.Total.path / 1000.f) << " km.";
+	}
+
+	DrawTextShadow(718, 208, ss.str(), c);
+	ss.str(""); ss.clear();
+
+	DrawTextShadow(718 - GetTextW(hdcCMain, "Time hunted  "), 228, "Time hunted  ", c);
+	ss << std::dec << (ttm / 3600) << ":"; // Hours
+	ss << std::setfill('0') << std::setw(2) << ((ttm % 3600) / 60) << ":"; // Minutes
+	ss << std::setfill('0') << std::setw(2) << (ttm % 60); // Seconds
+	DrawTextShadow(718, 228, ss.str(), c);
+	ss.str(""); ss.clear();
+
+	DrawTextShadow(718 - GetTextW(hdcCMain, "Shots made  "), 248, "Shots made  ", c);
+	ss << g_UserProfile.Total.smade;
+	DrawTextShadow(718, 248, ss.str(), c);
+	ss.str(""); ss.clear();
+
+	accuracy = 0;
+	if (g_UserProfile.Total.success > 0 && g_UserProfile.Total.smade > 0)
+		accuracy = static_cast<int>((float)((float)g_UserProfile.Total.success / (float)g_UserProfile.Total.smade) * 100.f);
+
+	DrawTextShadow(718 - GetTextW(hdcCMain, "Accuracy  "), 268, "Accuracy  ", c);
+	ss << accuracy << "%";
+	DrawTextShadow(718, 268, ss.str(), c);
 
 	DrawMenuProfile();
 }
@@ -917,11 +1119,23 @@ void DrawMenuStatistics()
 */
 void DrawMenuCredits()
 {
+	uint32_t color = RGB(239, 228, 176);
+	std::vector<std::string> contributor_list = {
+		"Rexhunter99"
+	};
+
 	InterfaceSetFont(fnt_Small);
 
-	DrawTextShadow(600, 60, "Launcher Code:", RGB(239, 228, 176));
-	DrawTextShadow(700, 60, "Rexhunter99", RGB(239, 228, 176)); // Please do not remove this name
-	// Add your names here, every 14 pixels on the Y axis
+	DrawURLShadow(550, 42, g_GitHubURL, RGB(126, 178, 239));
+
+	DrawTextShadow(550, 60, "Launcher Code:", color);
+	
+	int i = 0;
+	for (auto contributor : contributor_list)
+	{
+		DrawTextShadow(650, 60 + (i * 15), contributor, color); // Please do not remove this name
+		i++;
+	}
 }
 
 
@@ -936,14 +1150,18 @@ void DrawMenuHunt()
 	DrawTextShadow(335, 38, ss.str(), c);
 	ss.str(""); ss.clear();
 
-	ss << g_UserProfile.Score; // Subtract the costs of selections
+	ss << ((int32_t)(g_UserProfile.Score - g_ScoreDebit)); // Subtract the costs of selections
 	DrawTextShadow(406, 38, ss.str(), c);
 	ss.str(""); ss.clear();
 
 	InterfaceSetFont(fnt_Midd);
-	for (int i = 0; i < g_AreaInfo[0].m_Description.size(); i++)
+
+	if (MenuHunt[0].Selected != -1)
 	{
-		DrawTextShadow(424, 96 + ((i) * 16), g_AreaInfo[0].m_Description[i], c);
+		for (unsigned i = 0; i < g_AreaInfo[MenuHunt[0].Selected].m_Description.size(); i++)
+		{
+			DrawTextShadow(424, 96 + ((i) * 16), g_AreaInfo[MenuHunt[0].Selected].m_Description[i], c);
+		}
 	}
 
 	if (g_HuntSelectPic != nullptr)
@@ -952,6 +1170,8 @@ void DrawMenuHunt()
 	}
 
 	InterfaceSetFont(fnt_Small);
+
+	int32_t score = g_UserProfile.Score - g_ScoreDebit;
 
 	unsigned list_max = min(g_AreaInfo.size(), 10);
 
@@ -962,14 +1182,19 @@ void DrawMenuHunt()
 		std::stringstream sc;
 		sc << g_AreaInfo[ii].m_Price;
 
-		if (g_AreaInfo[ii].m_Rank > g_UserProfile.Rank)
+		if (score < g_AreaInfo[ii].m_Price)
 			c = 0x707070;
 
-		DrawTextShadow(10 + 4, 382 + (16 * i), g_AreaInfo[ii].m_Name, c);
-		DrawTextShadow(10 + 180 - 4, 382 + (16 * i), sc.str(), c, DTA_RIGHT);
+		if (MenuHunt[0].Selected == ii)
+		{
+			c = RGB(255, 255, 10);
+		}
+
+		DrawTextShadow(MenuHunt[0].Rect.left + 4, MenuHunt[0].Rect.top + (16 * i), g_AreaInfo[ii].m_Name, c);
+		DrawTextShadow(MenuHunt[0].Rect.right - 4, MenuHunt[0].Rect.top + (16 * i), sc.str(), c, DTA_RIGHT);
 	}
 
-	for (unsigned ii = MenuHunt[1].Offset; ii < MenuHunt[1].Offset + g_DinoList.size(); ii++)
+	for (unsigned ii = MenuHunt[1].Offset; ii < MenuHunt[1].Offset + MenuHunt[1].Item.size(); ii++)
 	{
 		int i = ii - MenuHunt[1].Offset;
 		uint32_t c = 0xB0B070;
@@ -988,29 +1213,57 @@ void DrawMenuHunt()
 				c = 0x707070;
 			}
 
-			if (g_UserProfile.Score < di.m_Price)
+			if (score < di.m_Price)
 			{
 				c = 0x707070;
 			}
 
-			DrawTextShadow(214, 382 + (16 * i), s, c);
-			DrawTextShadow(210 + 180 - 4, 382 + (16 * i), sc.str(), c, DTA_RIGHT);
+			if (MenuHunt[1].Item[ii].second)
+			{
+				c = RGB(255, 255, 10);
+			}
+
+			DrawTextShadow(MenuHunt[1].Rect.left + 4, MenuHunt[1].Rect.top + (16 * i), s, c);
+			DrawTextShadow(MenuHunt[1].Rect.right - 4, MenuHunt[1].Rect.top + (16 * i), sc.str(), c, DTA_RIGHT);
 		}
 		catch (std::out_of_range& e) {
 			throw std::runtime_error(e.what());
 		}
 	}
 
-	for (unsigned ii = MenuHunt[2].Offset; ii < MenuHunt[2].Offset + g_WeapInfo.size(); ii++)
+	for (unsigned ii = MenuHunt[2].Offset; ii < MenuHunt[2].Offset + MenuHunt[2].Item.size(); ii++)
 	{
+		uint32_t c = 0xB0B070;
 		int i = ii - MenuHunt[2].Offset;
-		DrawTextShadow(MenuHunt[2].Rect.left + 4, MenuHunt[2].Rect.top + (16 * i), g_WeapInfo[ii].m_Name, 0xB0B070);
+		WeapInfo& wi = g_WeapInfo[ii];
+		std::stringstream sc;
+		sc << wi.m_Price;
+		
+		if (score < wi.m_Price)
+		{
+			c = 0x707070;
+		}
+
+		if (MenuHunt[2].Item[ii].second)
+		{
+			c = RGB(255, 255, 10);
+		}
+
+		DrawTextShadow(MenuHunt[2].Rect.left + 4, MenuHunt[2].Rect.top + (16 * i), g_WeapInfo[ii].m_Name, c);
+		DrawTextShadow(MenuHunt[2].Rect.right - 4, MenuHunt[2].Rect.top + (16 * i), sc.str(), c, DTA_RIGHT);
 	}
 
 	for (unsigned ii = MenuHunt[3].Offset; ii < MenuHunt[3].Offset + MenuHunt[3].Item.size(); ii++)
 	{
+		uint32_t c = 0xB0B070;
 		int i = ii - MenuHunt[3].Offset;
-		DrawTextShadow(MenuHunt[3].Rect.left + 4, MenuHunt[3].Rect.top + (16 * i), MenuHunt[3].Item[ii], 0xB0B070);
+
+		if (MenuHunt[3].Item[ii].second)
+		{
+			c = RGB(255, 255, 10);
+		}
+
+		DrawTextShadow(MenuHunt[3].Rect.left + 4, MenuHunt[3].Rect.top + (16 * i), MenuHunt[3].Item[ii].first, c);
 	}
 }
 
@@ -1028,7 +1281,7 @@ void DrawMenuRegistry()
 	{
 		InterfaceSetFont(fnt_Midd);
 		DrawTextShadow(290, 370, "Do you want to delete player", 0x00B08030);
-		ss << "\'" << g_UserProfile.Name << "\' ?";
+		ss << "\'" << g_Profiles[g_ProfileIndex].m_Name << "\' ?";
 		DrawTextShadow(300, 394, ss.str(), 0x00B08030);
 		InterfaceSetFont(0);
 	}
@@ -1081,14 +1334,12 @@ void MenuEventInput(int32_t menu)
 {
 	if (!g_KeyboardUsed) return;
 
-	//POINT& p = g_CursorPos;
 	uint8_t id = g_MenuItem.GetID(g_CursorPos.x / 2, g_CursorPos.y / 2);
 
-#ifdef _DEBUG
-	if (g_KeyboardState[VK_RETURN] & 128) {
-		std::cout << "MenuLeftClick: " << ((int)id) << std::endl;
+	if (g_KeyboardState[VK_LBUTTON] & 128) {
+		PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+		//AddVoice(g_MenuSound_Go.m_Length, g_MenuSound_Go.m_Data);
 	}
-#endif
 
 	if (menu == MENU_CREDITS)
 	{
@@ -1102,7 +1353,17 @@ void MenuEventInput(int32_t menu)
 
 		if (g_KeyboardState[VK_LBUTTON] & 128) {
 			WaitForMouseRelease();
-			ChangeMenuState(MENU_MAIN);
+			RECT rc = { 550, 42, 600 + GetTextW(hdcCMain, g_GitHubURL), 56 };
+
+			if (IsPointInRect(g_CursorPos, rc))
+			{
+				ShellExecute(0, 0, TEXT(g_GitHubURL), 0, 0, SW_SHOW);
+			}
+			else
+			{
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+				ChangeMenuState(MENU_MAIN);
+			}
 		}
 	}
 	else if (menu == MENU_REGISTER)
@@ -1119,6 +1380,8 @@ void MenuEventInput(int32_t menu)
 
 		if (g_KeyboardState[VK_LBUTTON] & 128) {
 			if (id == 1) {
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+
 				if (g_Profiles[g_ProfileIndex].m_Name.empty()) {
 					g_UserProfile.New(g_TypingBuffer);
 					g_Options.Default();
@@ -1135,10 +1398,12 @@ void MenuEventInput(int32_t menu)
 			else if (id == 2) {
 				// Delete the selected 'save'
 				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_REGISTRY_DELETE);
 			}
 			else {
 				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menumov.wav", NULL, SND_ASYNC | SND_FILENAME);
 				g_ProfileIndex = g_HiliteProfileIndex;
 			}
 		}
@@ -1152,11 +1417,13 @@ void MenuEventInput(int32_t menu)
 			{
 				WaitForMouseRelease();
 				TrophyDelete(g_ProfileIndex); // Delete the last clicked profile
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_REGISTER);
 			}
 			else if (id == 2)
 			{
 				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_REGISTER);
 			}
 		}
@@ -1169,12 +1436,14 @@ void MenuEventInput(int32_t menu)
 			if (id == 1)
 			{
 				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_MAIN);
 			}
 			else if (id == 2)
 			{
 				WaitForMouseRelease();
 				TrophyDelete(g_ProfileIndex);
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_REGISTER);
 			}
 		}
@@ -1192,6 +1461,7 @@ void MenuEventInput(int32_t menu)
 			if (g_KeyboardState[VK_LBUTTON] & 128)
 			{
 				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_MAIN);
 			}
 		}
@@ -1262,17 +1532,17 @@ void MenuEventInput(int32_t menu)
 
 							mo.Selected = mo.Hilite;
 
-							if (mo.Hilite < 18)
+							if (mo.Hilite < MenuOptions[OPT_KEYBINDINGS].Item.size() - 2)
 							{
 								WaitForMouseRelease();
 								g_WaitKey = mo.Hilite;
 							}
-							else if (mo.Hilite == 18) // Mouse Y-Axis Inverted
+							else if (mo.Hilite == MenuOptions[OPT_KEYBINDINGS].Item.size() - 2) // Mouse Y-Axis Inverted
 							{
 								WaitForMouseRelease();
 								g_Options.MouseInvert = !g_Options.MouseInvert;
 							}
-							else if (mo.Hilite == 19) // Mouse Sensitivty Slider
+							else if (mo.Hilite == MenuOptions[OPT_KEYBINDINGS].Item.size() - 1) // Mouse Sensitivty Slider
 							{
 								g_Options.MouseSensitivity = (int)(v * 255.f);
 							}
@@ -1337,25 +1607,216 @@ void MenuEventInput(int32_t menu)
 		}
 	}
 	else if (menu == MENU_HUNT) {
-		if (g_KeyboardState[VK_ESCAPE] & 128) {
+		if (g_KeyboardState[VK_ESCAPE] & 128)
+		{
 			ChangeMenuState(MENU_QUIT);
 		}
 
-		if (g_KeyboardState[VK_LBUTTON] & 128) {
-			if (id >= 1 && id <= 6) {
+		// Mouse hover
+		if (IsPointInRect(g_CursorPos, MenuHunt[0].Rect))
+		{
+			WaitForMouseRelease();
+			int32_t scorea = 0;
+
+			if (MenuHunt[0].Selected != -1)
+			{
+				scorea = g_AreaInfo[MenuHunt[0].Selected].m_Price;
+			}
+
+			int32_t score = (g_UserProfile.Score - g_ScoreDebit) + scorea;
+			int yd = g_CursorPos.y - MenuHunt[0].Rect.top;
+
+			unsigned index = yd / 16;
+
+			if (index < g_AreaInfo.size())
+			{
+				g_HuntSelectPic = &g_AreaInfo[index].m_Thumbnail;
+
+				if ((g_KeyboardState[VK_LBUTTON] & 128) && score >= g_AreaInfo[index].m_Price)
+				{
+					WaitForMouseRelease();
+					//PlaySound("huntdat/soundfx/menumov.wav", NULL, SND_ASYNC | SND_FILENAME);
+
+					// Reset the states
+					for (auto i = MenuHunt[0].Item.begin(); i != MenuHunt[0].Item.end(); i++)
+					{
+						i->second = false;
+					}
+
+					MenuHunt[0].Item[index].second = true;
+					MenuHunt[0].Selected = index;
+
+					g_HuntSelectPic = &g_AreaInfo[index].m_Thumbnail;
+
+					g_ScoreDebit = CalculateDebit();
+				}
+			}
+		}
+		else if (IsPointInRect(g_CursorPos, MenuHunt[1].Rect))
+		{
+			int32_t score = g_UserProfile.Score - g_ScoreDebit;
+			int yd = g_CursorPos.y - MenuHunt[1].Rect.top;
+
+			unsigned index = yd / 16;
+
+			if (index < MenuHunt[1].Item.size())
+			{
+				g_HuntSelectPic = &g_DinoInfo[g_DinoList[index]].m_Thumbnail;
+
+				if ((g_KeyboardState[VK_LBUTTON] & 128))
+				{
+					WaitForMouseRelease();
+					//PlaySound("huntdat/soundfx/menumov.wav", NULL, SND_ASYNC | SND_FILENAME);
+
+					if (score >= g_DinoInfo[g_DinoList[index]].m_Price && !MenuHunt[1].Item[index].second)
+					{
+						MenuHunt[1].Item[index].second = true;
+					}
+					else
+					{
+						MenuHunt[1].Item[index].second = false;
+					}
+
+					g_ScoreDebit = CalculateDebit();
+				}
+			}
+		}
+		else if (IsPointInRect(g_CursorPos, MenuHunt[2].Rect))
+		{
+			int32_t score = g_UserProfile.Score - g_ScoreDebit;
+			int yd = g_CursorPos.y - MenuHunt[2].Rect.top;
+
+			unsigned index = yd / 16;
+
+			if (index < MenuHunt[2].Item.size())
+			{
+
+				if ((g_KeyboardState[VK_LBUTTON] & 128))
+				{
+					WaitForMouseRelease();
+					//PlaySound("huntdat/soundfx/menumov.wav", NULL, SND_ASYNC | SND_FILENAME);
+
+					if (score >= g_WeapInfo[index].m_Price && !MenuHunt[2].Item[index].second)
+					{
+						MenuHunt[2].Item[index].second = true;
+					}
+					else
+					{
+						MenuHunt[2].Item[index].second = false;
+					}
+
+					g_ScoreDebit = CalculateDebit();
+				}
+			}
+		}
+		else if (IsPointInRect(g_CursorPos, MenuHunt[3].Rect))
+		{
+			//int32_t score = g_UserProfile.Score - g_ScoreDebit;
+			int yd = g_CursorPos.y - MenuHunt[3].Rect.top;
+			unsigned index = yd / 16;
+
+			if (index < MenuHunt[3].Item.size())
+			{
+				if ((g_KeyboardState[VK_LBUTTON] & 128))
+				{
+					WaitForMouseRelease();
+					//PlaySound("huntdat/soundfx/menumov.wav", NULL, SND_ASYNC | SND_FILENAME);
+
+					MenuHunt[3].Item[index].second = !MenuHunt[3].Item[index].second;
+				}
+			}
+		}
+
+		// Left Mouse Click
+		if (g_KeyboardState[VK_LBUTTON] & 128)
+		{
+			if (id >= 1 && id <= 6)
+			{
 				WaitForMouseRelease();
-				g_MenuItem.ToggleIsElementSet(id);
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+				bool b = g_MenuItem.ToggleIsElementSet(id);
+
+				if (id >= 1 && id <= 3)
+				{
+					g_TimeOfDay = id - 1;
+
+					for (int i = 1; i <= 3; i++)
+					{
+						if (i != id)
+							g_MenuItem.SetIsElementSet(i, false);
+					}
+				}
+
+				if (id == 4)
+					b = false; // Unused
+				if (id == 5)
+					g_Options.TranqMode = b;
+				if (id == 6)
+					g_ObserverMode = b;
 			}
 			else if (id == 7) // Back
 			{
 				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_MAIN);
 			}
 			else if (id == 8) // Hunt/Next
 			{
 				// Launch the game
 				WaitForMouseRelease();
-				//LaunchProcess("", "");
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+				if (MenuHunt[0].Selected == -1)
+				{
+					// -- Don't launch
+					return;
+				}
+
+				int din = 0;
+				int wep = 0;
+
+				for (unsigned i = 0; i < g_DinoList.size(); i++)
+				{
+					if (MenuHunt[1].Item[i].second)
+						din |= 1 << i;
+				}
+
+				for (unsigned i = 0; i < g_WeapInfo.size(); i++)
+				{
+					if (MenuHunt[2].Item[i].second)
+						wep |= 1 << i;
+				}
+
+				std::stringstream params("");
+
+				params << "reg=" << g_UserProfile.RegNumber;
+				params << " prj=" << g_AreaInfo[MenuHunt[0].Selected].m_ProjectName;
+				params << " din=" << din;
+				params << " wep=" << wep;
+				params << " dtm=" << g_TimeOfDay;
+
+#ifdef _iceage
+				if (MenuHunt[3].Item[4].second)
+					params << " -resupply";
+#endif //_iceage
+				if (MenuHunt[3].Item[3].second)
+					params << " -double";
+				if (g_Options.RadarMode)
+					params << " -radar";
+				if (g_Options.TranqMode)
+					params << " -tranq";
+				if (g_ObserverMode)
+					params << " -observ";
+
+#ifdef _DEBUG
+				params << " -debug";
+#endif //_DEBUG
+				std::stringstream renderer("");
+				renderer << g_RendererFile[g_Options.RenderAPI] << ".ren";
+
+				TrophySave(g_UserProfile); // Save all the settings
+
+				std::cout << "Execute: [" << renderer.str() << " " << params.str() << "]" << std::endl;
+				//LaunchProcess(renderer.str(), params.str());
 			}
 		}
 	}
@@ -1366,12 +1827,16 @@ void MenuEventInput(int32_t menu)
 		}
 		else if (g_KeyboardState[VK_LBUTTON] & 128) {
 			WaitForMouseRelease();
-			if (id == 1) { WaitForMouseRelease(); ChangeMenuState(MENU_HUNT); }
-			else if (id == 2) { WaitForMouseRelease(); ChangeMenuState(MENU_OPTIONS); }
-			else if (id == 3) { WaitForMouseRelease(); /*LaunchProcess("", "");*/ }
-			else if (id == 4) { WaitForMouseRelease(); ChangeMenuState(MENU_CREDITS); }
-			else if (id == 5) { WaitForMouseRelease(); ChangeMenuState(MENU_QUIT); }
-			else if (id == 6) { WaitForMouseRelease(); ChangeMenuState(MENU_STATISTICS); }
+			if (id >= 1 && id <= 6) {
+				WaitForMouseRelease();
+				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+				if (id == 1) { ChangeMenuState(MENU_HUNT); }
+				else if (id == 2) { ChangeMenuState(MENU_OPTIONS); }
+				else if (id == 3) { /*LaunchProcess("", "reg=g_UserProfile.RegNumber prj=trophy din=0 wep=0 dtm=1");*/ }
+				else if (id == 4) { ChangeMenuState(MENU_CREDITS); }
+				else if (id == 5) { ChangeMenuState(MENU_QUIT); }
+				else if (id == 6) { ChangeMenuState(MENU_STATISTICS); }
+			}
 		}
 	}
 	else if (menu == MENU_STATISTICS)
@@ -1382,6 +1847,7 @@ void MenuEventInput(int32_t menu)
 
 		if (g_KeyboardState[VK_LBUTTON] & 128) {
 			WaitForMouseRelease();
+			//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 			ChangeMenuState(MENU_MAIN);
 		}
 	}
@@ -1389,6 +1855,8 @@ void MenuEventInput(int32_t menu)
 	{
 		if (g_KeyboardState[VK_LBUTTON] & 128) {
 			WaitForMouseRelease();
+			//if (id == 1 || id == 2) PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+
 			if (id == 1)      PostQuitMessage(0);
 			else if (id == 2) ChangeMenuState(MENU_MAIN);
 		}
@@ -1417,7 +1885,7 @@ void DrawMenuOptions()
 		if (menu.Hilite == i) c = on_c;
 		else c = label_c;
 
-		DrawTextShadow(x0, y0, menu.Item[i], c);
+		DrawTextShadow(x0, y0, menu.Item[i].first, c);
 
 		if (i == 0) DrawSliderBar(x1 - tbw, y0 + 12, tbw, (float)g_Options.Aggression / 255.0f, label_c);
 		if (i == 1) DrawSliderBar(x1 - tbw, y0 + 12, tbw, (float)g_Options.Density / 255.0f, label_c);
@@ -1428,7 +1896,7 @@ void DrawMenuOptions()
 	}
 
 	// Control key bindings
-	for (int i = 0; i < MenuOptions[OPT_KEYBINDINGS].Count; i++) {
+	for (unsigned i = 0; i < MenuOptions[OPT_KEYBINDINGS].Count; i++) {
 		MenuSet& menu = MenuOptions[OPT_KEYBINDINGS];
 		int x0 = menu.Rect.left + menu.Padding;// .x0;
 		int x1 = menu.Rect.right - menu.Padding;// .x0;
@@ -1442,15 +1910,17 @@ void DrawMenuOptions()
 		if (menu.Hilite == i) c = on_c;
 		else c = label_c;
 
-		DrawTextShadow(x0, y0, menu.Item[i], c);
+		DrawTextShadow(x0, y0, menu.Item[i].first, c);
 
-		if (i < 18)
+		if (i < MenuOptions[OPT_KEYBINDINGS].Item.size() - 2)
 		{
 			if (g_WaitKey == i) DrawTextShadow(x1, y0, "<?>", value_c, DTA_RIGHT);
 			else                DrawTextShadow(x1, y0, ss.str(), value_c, DTA_RIGHT);
 		}
-		else if (i == 18) DrawTextShadow(x1, y0, st_BoolText[(int)g_Options.MouseInvert], value_c, DTA_RIGHT);
-		else if (i == 19) DrawSliderBar(x1 - tbw, y0 + 12, tbw, (float)g_Options.MouseSensitivity / 255.0f, label_c);
+		else if (i == MenuOptions[OPT_KEYBINDINGS].Item.size() - 2)
+			DrawTextShadow(x1, y0, st_BoolText[(int)g_Options.MouseInvert], value_c, DTA_RIGHT);
+		else if (i == MenuOptions[OPT_KEYBINDINGS].Item.size() - 1)
+			DrawSliderBar(x1 - tbw, y0 + 12, tbw, (float)g_Options.MouseSensitivity / 255.0f, label_c);
 	}
 
 	// Video/Graphics options
@@ -1464,7 +1934,7 @@ void DrawMenuOptions()
 		if (menu.Hilite == i) c = on_c;
 		else c = label_c;
 
-		DrawTextShadow(x0, y0, menu.Item[i], c);
+		DrawTextShadow(x0, y0, menu.Item[i].first, c);
 
 		if (i == 0) DrawTextShadow(x1, y0, st_RenText[g_Options.RenderAPI], value_c, DTA_RIGHT);
 		else if (i == 1) {
@@ -1556,6 +2026,8 @@ void ProcessMenu()
 
 	int64_t t = Timer::GetTime();
 	int64_t t_diff = t - g_PrevFrameTime;
+
+	InterfaceSetFont(fnt_Small);
 
 	std::stringstream ss;
 	ss << "FPS: " << g_FramesPerSecond;

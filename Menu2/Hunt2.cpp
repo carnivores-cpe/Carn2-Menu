@@ -34,7 +34,12 @@ void CreateLog()
 	}
 #endif //_DEBUG
 
-	std::cout << "Carnivores Menu\nVersion: 1.1 " << __DATE__ << "\n" << std::setfill('=') << std::setw(40) << "=" << std::endl;
+#ifdef _iceage
+	std::cout << "Carnivores: Ice Age - Menu\n Version: " << VERSION_MAJOR << "." << VERSION_MINOR << " ";
+#else
+	std::cout << "Carnivores 2 - Menu\n Version: " << VERSION_MAJOR << "." << VERSION_MINOR << " ";
+#endif
+	std::cout << __DATE__ << "\n" << std::setfill('=') << std::setw(40) << "=" << std::endl;
 }
 
 
@@ -88,6 +93,45 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 	}
 
 	return false;
+}
+
+
+std::string errordialog_str = "";
+
+BOOL CALLBACK ErrorDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+{
+	switch (uMsg)
+	{
+	case WM_INITDIALOG:
+		SetDlgItemText(hWnd, IDC_ERROR_TEXT, errordialog_str.c_str());
+		break;
+
+	case WM_COMMAND:
+		switch (LOWORD(wParam))
+		{
+		case IDOK:
+			// Do the do.
+		case IDCANCEL:
+			EndDialog(hWnd, wParam);
+			return true;
+		}
+		break;
+	}
+
+	return false;
+}
+
+
+void ShowErrorMessage(const std::string& error_text)
+{
+	errordialog_str = error_text;
+
+	if (DialogBox(hInst, MAKEINTRESOURCE(IDD_ERROR_DIALOG), hwndMain, &ErrorDialogProc) == IDOK)
+	{
+	}
+	else
+	{
+	}
 }
 
 
@@ -162,6 +206,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		CreateMainWindow();
 		InitNetwork();
 		InitInterface();
+		InitAudioSystem(hwndMain, NULL, 0);
 
 		LoadResourcesScript();
 		LoadResources();
@@ -191,20 +236,39 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		std::cout << "Exited Message Loop." << std::endl;
 	}
 	catch (std::runtime_error& e) {
-		std::cout << "! FATAL EXCEPTION: Runtime Error !" << std::endl;
-		std::cout << "A runtime_error exception has occurred, the reason is:\n" << e.what() << std::endl;
-		MessageBox(HWND_DESKTOP, "A fatal exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`", "Runtime Exception", MB_OK | MB_ICONERROR);
+		std::stringstream ss;
+		ss << "\r\n! FATAL EXCEPTION: Runtime Error !\r\n";
+		ss << "An std::runtime_error exception has occurred, here are some details:\r\n" << e.what() << "\r\n";
+		std::cout << ss.str() << std::endl;
+		
+		//MessageBox(HWND_DESKTOP, "A fatal exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`", "Runtime Exception", MB_OK | MB_ICONERROR);
+		
+		std::string s = ss.str();
+		ss.str(""); ss.clear();
+		ss << "A fatal runtime exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`\r\n" << s;
+
+		ShowErrorMessage(ss.str());
 	}
 	catch (std::exception& e) {
-		std::cout << "! FATAL EXCEPTION: C++ Standard Library !" << std::endl;
-		std::cout << "A C++ Standard Library exception has occurred, the reason is:\n" << e.what() << std::endl;
-		MessageBox(HWND_DESKTOP, "A fatal exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`", "C++ Exception", MB_OK | MB_ICONERROR);
+		std::stringstream ss;
+		ss << "\r\n! UNCAUGHT EXCEPTION: C++ Standard Exception !\r\n";
+		ss << "An std::exception has occurred but was not handled, here are some details:\r\n" << e.what() << "\r\n";
+		std::cout << ss.str() << std::endl;
+
+		//MessageBox(HWND_DESKTOP, "A fatal exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`", "Runtime Exception", MB_OK | MB_ICONERROR);
+
+		std::string s = ss.str();
+		ss.str(""); ss.clear();
+		ss << "An uncaught C++ exception has occured and Menu2 must close.\r\nPlease refer to the `menu.log`\r\n" << s;
+
+		ShowErrorMessage(ss.str());
 	}
 
 	ReleaseResources();
+	Audio_Shutdown();
 	ShutdownInterface();
 	ShutdownNetwork();
-	DestroyWindow(hwndMain);
+	DestroyWindow(hwndMain); hwndMain = HWND_DESKTOP;
 	UnregisterClass("CarnivoresMenu2", hInst);
 	CloseLogs();
 

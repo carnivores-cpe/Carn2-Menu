@@ -21,6 +21,9 @@
 
 
 
+#define VERSION_MAJOR 1
+#define VERSION_MINOR 1
+
 #ifdef _MAIN_
 #	define EXTERNAL
 #else
@@ -197,11 +200,12 @@ public:
 		}
 	}
 
-	void ToggleIsElementSet(unsigned id) {
+	bool ToggleIsElementSet(unsigned id) {
 		if (!(id < m_ElementSet.size())) {
 			throw std::out_of_range("ToggleIsElementSet() `id` is out of range!");
 		}
 		m_ElementSet[id] = !m_ElementSet[id];
+		return (m_ElementSet[id]);
 	}
 
 	bool GetIsElementSet(unsigned id) const {
@@ -284,7 +288,10 @@ public:
 	int32_t m_Reload; // Shots before reload
 	int32_t	m_Price; // Credits price
 	int32_t m_Rank; // Rank required
+
+	Picture m_Thumbnail; // Preview icon/image associated with this area
 };
+
 
 class AreaInfo
 {
@@ -324,6 +331,47 @@ public:
 	}
 };
 
+
+class UtilInfo
+{
+protected:
+public:
+
+	std::string m_Name;
+	std::vector<std::string> m_Description;
+	std::string m_Command;
+	Picture m_Thumbnail; // Preview icon/image associated with this area
+
+//public:
+
+	UtilInfo() :
+		m_Name(""),
+		m_Description(),
+		m_Command(""),
+		m_Thumbnail()
+	{
+	}
+	
+	UtilInfo(const std::string& name, std::vector<std::string> description, const std::string& command, const std::string& thumbnail) :
+		m_Name(name),
+		m_Description(description),
+		m_Command(command),
+		m_Thumbnail()
+	{
+		//if (!thumbnail.empty())
+			//LoadPicture(this->m_Thumbnail, thumbnail);
+	}
+
+	UtilInfo(const UtilInfo& ui) :
+		m_Name(ui.m_Name),
+		m_Description(ui.m_Description),
+		m_Command(ui.m_Command),
+		m_Thumbnail(ui.m_Thumbnail)
+	{
+	}
+};
+
+
 class TKeyMap
 {
 public:
@@ -343,8 +391,10 @@ public:
 		fkCrouch,
 		fkCall,
 		fkCCall,
-		fkBinoc,
-		fkSupply;
+		fkBinoc;
+#ifdef _iceage
+	int32_t	fkSupply;
+#endif
 };
 
 class Options
@@ -472,6 +522,7 @@ EXTERNAL uint32_t				g_GameState;
 EXTERNAL std::vector<DinoInfo>	g_DinoInfo;
 EXTERNAL std::vector<WeapInfo>	g_WeapInfo;
 EXTERNAL std::vector<AreaInfo>	g_AreaInfo;
+EXTERNAL std::vector<UtilInfo>	g_UtilInfo;
 EXTERNAL std::vector<unsigned int> g_DinoList;
 EXTERNAL uint32_t				g_ProfileIndex;
 EXTERNAL uint32_t				g_HiliteProfileIndex;
@@ -480,13 +531,22 @@ EXTERNAL Profile				g_UserProfile;
 EXTERNAL ProfileShort			g_Profiles[10];
 EXTERNAL Options				g_Options;
 EXTERNAL Picture*				g_HuntSelectPic;
+EXTERNAL int32_t				g_TimeOfDay;
+EXTERNAL bool					g_ObserverMode;
+EXTERNAL int32_t				g_ScoreDebit;
 
 EXTERNAL uint8_t                g_KeyboardState[256];
+
+EXTERNAL SoundFX				g_MenuSound_Go;
+EXTERNAL SoundFX				g_MenuSound_Ambient;
+EXTERNAL SoundFX				g_MenuSound_Move;
 
 
 // ======================================================================= //
 // Global Functions
 // ======================================================================= //
+
+void ShowErrorMessage(const std::string&);
 
 /*** Menu ***/
 void InitInterface();
@@ -511,12 +571,28 @@ void TrophySave(Profile& profile);
 void TrophyDelete(uint32_t);
 bool ReadTGAFile(const std::string& path, TargaImage& tga);
 void LoadPicture(Picture& pic, const std::string& fpath);
+std::vector<std::string> LoadText(const std::string& path);
+bool LoadWave(SoundFX& sfx, const std::string& path);
 
 /*** Networking ***/
 void InitNetwork();
 void ShutdownNetwork();
 void NetworkGet(LPSTR url, LPSTR host, LPSTR data);
 void NetworkPost(LPSTR url, LPSTR host, LPSTR data);
+
+/*** Audio ***/
+void Audio_Shutdown();
+void InitAudioSystem(HWND hw, HANDLE hlog, int  driver);
+void AudioStop();
+void Audio_Restore();
+void AudioSetCameraPos(float cx, float cy, float cz, float ca, float cb);
+void Audio_SetEnvironment(int e, float f);
+void SetAmbient(int length, short int* lpdata, int av);
+void SetAmbient3d(int length, short int* lpdata, float cx, float cy, float cz);
+void AddVoice3dv(int length, short int* lpdata, float cx, float cy, float cz, int vol);
+void AddVoice3d(int length, short int* lpdata, float cx, float cy, float cz);
+void AddVoicev(int length, short int* lpdata, int v);
+void AddVoice(int length, short int* lpdata);
 
 
 #ifdef _MAIN_

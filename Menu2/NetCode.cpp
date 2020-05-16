@@ -39,14 +39,14 @@ void InitNetwork()
 
 	// Do other initialisation
 
-	std::cout << "Network: Winsock 2.2 Init Ok." << std::endl;
+	std::cout << "Network: Winsock 2.2 Init Ok!" << std::endl;
 }
 
 
 void ShutdownNetwork()
 {
 	WSACleanup();
-	std::cout << "Network: Shutdown Ok." << std::endl;
+	std::cout << "Network: Shutdown Ok!" << std::endl;
 }
 
 
