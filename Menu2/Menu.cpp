@@ -842,7 +842,9 @@ void MenuEventStart(int32_t menu_state)
 		g_MenuItem.SetIsElementSet(6, g_ObserverMode);
 
 		for (auto i = 0U; i < 4U; i++)
+		{
 			MenuHunt[i].Offset = 0;
+		}
 
 		MenuHunt[0].Item.clear();
 		for (auto i = 0U; i < g_AreaInfo.size(); i++)
@@ -908,6 +910,11 @@ void MenuEventStart(int32_t menu_state)
 		if (!g_AreaInfo.empty())
 		{
 			MenuHunt[0].Selected = 0;
+		}
+
+		for (auto i = 0U; i < 3U; i++)
+		{
+			MenuHunt[i].Item[0].second = true;
 		}
 
 		g_ScoreDebit = CalculateDebit();
@@ -1451,11 +1458,18 @@ void MenuEventInput(int32_t menu)
 				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 
 				if (g_Profiles[g_ProfileIndex].m_Name.empty()) {
-					g_UserProfile.New(g_TypingBuffer);
-					g_Options.Default();
-					TrophySave(g_UserProfile);
-					WaitForMouseRelease();
-					ChangeMenuState(MENU_REGISTRY_WAIVER);
+					if (!g_TypingBuffer.empty())
+					{
+						g_UserProfile.New(g_TypingBuffer);
+						g_Options.Default();
+						TrophySave(g_UserProfile);
+						WaitForMouseRelease();
+						ChangeMenuState(MENU_REGISTRY_WAIVER);
+					}
+					else
+					{
+						MessageBox(hwndMain, "You need to enter a name!", "Try again!", MB_OK | MB_ICONINFORMATION);
+					}
 				}
 				else {
 					TrophyLoad(g_UserProfile, g_ProfileIndex);

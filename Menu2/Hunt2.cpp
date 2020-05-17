@@ -102,10 +102,10 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 	// Get the exit code.
 	result = GetExitCodeProcess(processInformation.hProcess, (DWORD*)&exitCode);
 
-	if (!result)
+	if (result)
 	{
 		std::cout << "! Warning !\nThe process exited with error code: " << static_cast<int>(result) << "\n";
-		std::cout << " Check the associated `carnivor.log` for more details, or debug the binary `" << exe_name << "`" << std::endl;
+		std::cout << " Check the associated `render.log` for more details, or debug the binary `" << exe_name << "`" << std::endl;
 	}
 
 	// Close the handles.
@@ -148,6 +148,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
 	case WM_KEYDOWN:
 	{
+		if (wParam == VK_F4) { HuntWindowResize(); }
 #ifdef _DEBUG
 		if (wParam == VK_F9) { PostQuitMessage(1); }
 #endif
