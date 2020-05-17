@@ -384,28 +384,28 @@ void LoadResources()
 	//LoadPicture(g_TrackBar[1], "huntdat/menu/sl_but.tga");
 	
 	UtilInfo ui;
-	ui.m_Name = "Camoflauge";
+	ui.m_Name = "Camouflage";
 	LoadText(ui.m_Description, "huntdat/menu/txt/camoflag.nfo");
 	ui.m_Command = "";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip1.tga");
 	g_UtilInfo.push_back(ui);
 	ui.m_Description.clear();
 
-	ui.m_Name = "GPS Radar";
+	ui.m_Name = "Radar";
 	LoadText(ui.m_Description, "huntdat/menu/txt/radar.nfo");
 	ui.m_Command = "-radar";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip2.tga");
 	g_UtilInfo.push_back(ui);
 	ui.m_Description.clear();
 
-	ui.m_Name = "Cover Scent";
+	ui.m_Name = "Cover scent";
 	LoadText(ui.m_Description, "huntdat/menu/txt/scent.nfo");
 	ui.m_Command = "";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip3.tga");
 	g_UtilInfo.push_back(ui);
 	ui.m_Description.clear();
 
-	ui.m_Name = "Double Ammo";
+	ui.m_Name = "Double ammo";
 	LoadText(ui.m_Description, "huntdat/menu/txt/double.nfo");
 	ui.m_Command = "";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip4.tga");
@@ -413,7 +413,7 @@ void LoadResources()
 	ui.m_Description.clear();
 
 #ifdef _iceage
-	ui.m_Name = "Ammo Resupply";
+	ui.m_Name = "Supply drop";
 	LoadText(ui.m_Description, "huntdat/menu/txt/resupply.nfo");
 	ui.m_Command = "-supply -resupply";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip5.tga");

@@ -482,12 +482,12 @@ void InitInterface()
 	MenuHunt[m].Padding = 4;
 	MenuHunt[m].Count = 0;
 	MenuHunt[m].Offset = 0;
-	MenuHunt[m].AddItem("Camoflauge");
-	MenuHunt[m].AddItem("Cover Scent");
+	MenuHunt[m].AddItem("Camouflage");
+	MenuHunt[m].AddItem("Cover scent");
 	MenuHunt[m].AddItem("Radar");
-	MenuHunt[m].AddItem("Double Ammo");
+	MenuHunt[m].AddItem("Double ammo");
 #ifdef _iceage
-	MenuHunt[m].AddItem("Ammo Resupply");
+	MenuHunt[m].AddItem("Supply drop");
 #endif //_iceage
 	MenuHunt[m].Rect = { 610, 382, 790, 542 };
 
@@ -1876,7 +1876,7 @@ void MenuEventInput(int32_t menu)
 				std::stringstream params("");
 
 				params << "reg=" << g_UserProfile.RegNumber;
-				params << " prj=" << g_AreaInfo[MenuHunt[0].Selected].m_ProjectName;
+				params << " prj=huntdat/areas/" << g_AreaInfo[MenuHunt[0].Selected].m_ProjectName;
 				params << " din=" << din;
 				params << " wep=" << wep;
 				params << " dtm=" << g_TimeOfDay;
@@ -1923,7 +1923,7 @@ void MenuEventInput(int32_t menu)
 					std::stringstream params("");
 
 					params << "reg=" << g_UserProfile.RegNumber;
-					params << " prj=trophy";
+					params << " prj=huntdat/areas/trophy";
 					params << " dtm=" << 1;
 #ifdef _DEBUG
 					params << " -debug";
