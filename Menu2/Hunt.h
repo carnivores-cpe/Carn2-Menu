@@ -227,12 +227,15 @@ public:
 class Picture
 {
 public:
-	int m_Width, m_Height;
+	unsigned m_Width;
+	unsigned m_Height;
 	uint16_t* m_Data;
 
 	Picture();
 	Picture(const Picture& p);
 	~Picture();
+
+	Picture& operator= (const Picture& rhs);
 
 	// TODO: Add Getters and Setters, move member variables to private
 };
@@ -244,6 +247,8 @@ public:
 	std::string	m_Name; // Creature name
 	std::string	m_FilePath; // Character file path
 	std::string	m_PicturePath; // Picture file path
+
+	std::vector<std::string> m_Description;
 
 	int32_t m_BaseHealth; // Base health
 	int32_t	m_AI; // AI index
@@ -264,7 +269,8 @@ public:
 	int32_t m_Rank; // Rank required
 
 	Picture m_CallIcon;	//<- Icon associated with this species
-	Picture m_Thumbnail;	//<- Menu thumbnail associated with this species
+	Picture m_Thumbnail; //<- Menu thumbnail associated with this species
+	Picture m_ThumbnailHidden; //<- 'Hidden' Menu thumbnail associated with this species
 };
 
 
@@ -274,6 +280,8 @@ public:
 	std::string m_Name; // Weapon Name
 	std::string m_FilePath; // Weapon Character File Name
 	std::string m_BulletFilePath; // Bullet Icon File Name
+
+	std::vector<std::string> m_Description;
 
 	float m_Power; // Damage Per Shot of Weapon [0.0~]
 	float m_Prec; // Precision of Weapon [0.0 - 1.1]
@@ -290,6 +298,7 @@ public:
 	int32_t m_Rank; // Rank required
 
 	Picture m_Thumbnail; // Preview icon/image associated with this area
+	Picture m_ThumbnailHidden; // 'Hidden' Preview icon/image associated with this area
 };
 
 
@@ -307,6 +316,7 @@ public:
 	std::vector<int> m_DinosAvail; // A list of animal AI indexes that are available on this map.
 
 	Picture m_Thumbnail; // Preview icon/image associated with this area
+	Picture m_ThumbnailHidden; // 'Hidden' Preview icon/image associated with this area
 
 	AreaInfo() :
 		m_Name(""),
@@ -546,7 +556,9 @@ EXTERNAL SoundFX				g_MenuSound_Move;
 // Global Functions
 // ======================================================================= //
 
+int LaunchProcess(const std::string& exe_name, std::string cmd_line);
 void ShowErrorMessage(const std::string&);
+void PrintLogSeparater();
 
 /*** Menu ***/
 void InitInterface();
@@ -558,6 +570,7 @@ void DrawRectangle(int, int, int, int, Color16);
 void DrawPicture(int, int, int, int, uint16_t*);
 void DrawTextShadow(int x, int y, const std::string& text, uint32_t color, int align);
 void LoadGameMenu(int32_t);
+void ChangeMenuState(int32_t);
 void MenuKeyCharEvent(uint16_t);
 void MenuMouseScrollEvent(int32_t, int32_t);
 void ProcessMenu();
@@ -570,8 +583,8 @@ void TrophyLoad(Profile& profile, int pr);
 void TrophySave(Profile& profile);
 void TrophyDelete(uint32_t);
 bool ReadTGAFile(const std::string& path, TargaImage& tga);
-void LoadPicture(Picture& pic, const std::string& fpath);
-std::vector<std::string> LoadText(const std::string& path);
+bool LoadPicture(Picture& pic, const std::string& fpath);
+bool LoadText(std::vector<std::string>& txt, const std::string& path);
 bool LoadWave(SoundFX& sfx, const std::string& path);
 
 /*** Networking ***/
@@ -725,7 +738,9 @@ EXTERNAL char g_KeyNames[256][24] = {
 "MouseR",
 "MouseM",
 "<?>",
-"", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+"Mouse4",
+"Mouse5",
+"", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
 "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",

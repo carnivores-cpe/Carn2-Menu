@@ -60,6 +60,7 @@ enum DrawTextAlignEnum {
 };
 
 
+std::pair<unsigned, unsigned> g_HuntInfo;
 Picture g_TrackBar[2];
 MenuSet MenuOptions[3];
 MenuSet MenuRegistry;
@@ -87,6 +88,9 @@ const char st_RenText[4][11] = { "Software", "3Dfx Glide", "Direct3D 7", "OpenGL
 const char st_AudText[5][16] = { "Software", "Direct Sound 3D", "Aureal 3D", "EAX", "OpenAL" };
 
 const char g_RendererFile[4][7] = { "v_soft", "v_3dfx", "v_d3d", "v_gl" };
+
+
+int MapVKKey(int k);
 
 
 bool IsPointInRect(POINT& p, RECT& rc)
@@ -128,7 +132,7 @@ void AcceptNewKey()
 					*((int*)(&g_Options.KeyMap) + g_WaitKey) = k;
 
 #ifdef _DEBUG
-					std::cout << "AcceptNewKey() : " << ((int)k) << std::endl;
+					std::cout << "AcceptNewKey() : " << ((int)k) << " MapVK: " << (MapVKKey(k)) << std::endl;
 #endif //_DEBUG
 
 					WaitForMouseRelease();
@@ -148,12 +152,14 @@ void ChangeMenuState(int32_t ms)
 	LoadGameMenu(g_MenuState);
 }
 
+
 int GetTextW(HDC hdc, const std::string& s)
 {
 	SIZE sz;
 	GetTextExtentPoint(hdc, s.c_str(), (int)s.length(), &sz);
 	return sz.cx;
 }
+
 
 int GetTextH(HDC hdc, const std::string& s)
 {
@@ -162,12 +168,18 @@ int GetTextH(HDC hdc, const std::string& s)
 	return sz.cy;
 }
 
+
+/*
+Map the virtual-key-code to a scan-code
+*/
 int MapVKKey(int k)
 {
 	if (k == VK_LBUTTON) return 124;
 	if (k == VK_RBUTTON) return 125;
 	if (k == VK_MBUTTON) return 126;
-	return MapVirtualKey(k, 0);
+	if (k == VK_XBUTTON1) return 128;
+	if (k == VK_XBUTTON2) return 129;
+	return MapVirtualKey(k, MAPVK_VK_TO_VSC);
 }
 
 
@@ -178,6 +190,10 @@ void MenuSet::AddItem(const std::string& txt)
 }
 
 
+/*
+Determine the amount of points that the current license selection
+in the hunt screen will cost.
+*/
 int32_t CalculateDebit()
 {
 	int32_t debit = 0;
@@ -206,12 +222,18 @@ int32_t CalculateDebit()
 }
 
 
+/*
+Currently unused
+*/
 void CALLBACK WaveOutProc(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstance, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
 
 }
 
 
+/*
+Currently unused
+*/
 void AudioSoftThread()
 {
 	HWAVEOUT hwo;
@@ -471,11 +493,13 @@ void InitInterface()
 
 	std::cout << "Interface: Initialisation Ok!" << std::endl;
 
+#ifdef _DEBUG
 	/*if (true)
 	{
 		std::thread audio_thread(AudioSoftThread);
 		audio_thread.join();
-	}*/
+		}*/
+#endif // _DEBUG
 }
 
 
@@ -609,8 +633,8 @@ void DrawPicture(int x, int y, Picture& pic)
 		memcpy((uint16_t*)lpVideoBuf + (y * 800), &menu.m_Image[(600 - y - 1) * 800], 800 * 2);
 	}*/
 
-	for (int i = 0; i < pic.m_Height; i++) {
-		memcpy((uint16_t*)lpVideoBuf + x + (y + i) * 800, pic.m_Data + (pic.m_Height - i - 1) * pic.m_Width, pic.m_Width * 2);
+	for (auto i = 0U; i < pic.m_Height; i++) {
+		memcpy((uint16_t*)lpVideoBuf + x + (y + i) * 800U, pic.m_Data + (pic.m_Height - i - 1) * pic.m_Width, pic.m_Width * 2);
 	}
 }
 
@@ -658,16 +682,16 @@ void DrawMenuBg(MenuItem& menu)
 			if (id2 == 0) on = false;
 
 			if (on) {
-				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 0) * 800L)) = menu.m_Image_On[(x + 0) + (600 - (y + 0) - 1) * 800];
-				*((uint16_t*)lpVideoBuf + ((x + 1L) + (y + 0) * 800L)) = menu.m_Image_On[(x + 1) + (600 - (y + 0) - 1) * 800];
-				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 1) * 800L)) = menu.m_Image_On[(x + 0) + (600 - (y + 1) - 1) * 800];
-				*((uint16_t*)lpVideoBuf + ((x + 1L) + (y + 1) * 800L)) = menu.m_Image_On[(x + 1) + (600 - (y + 1) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 0L) + (y + 0L) * 800L)) = menu.m_Image_On[(x + 0) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1L) + (y + 0L) * 800L)) = menu.m_Image_On[(x + 1) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 0L) + (y + 1L) * 800L)) = menu.m_Image_On[(x + 0) + (600 - (y + 1) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1L) + (y + 1L) * 800L)) = menu.m_Image_On[(x + 1) + (600 - (y + 1) - 1) * 800];
 			}
 			else {
-				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 0) * 800L)) = menu.m_Image[(x + 0) + (600 - (y + 0) - 1) * 800];
-				*((uint16_t*)lpVideoBuf + ((x + 1) + (y + 0) * 800L)) = menu.m_Image[(x + 1) + (600 - (y + 0) - 1) * 800];
-				*((uint16_t*)lpVideoBuf + ((x + 0) + (y + 1) * 800L)) = menu.m_Image[(x + 0) + (600 - (y + 1) - 1) * 800];
-				*((uint16_t*)lpVideoBuf + ((x + 1) + (y + 1) * 800L)) = menu.m_Image[(x + 1) + (600 - (y + 1) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 0L) + (y + 0L) * 800L)) = menu.m_Image[(x + 0) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1L) + (y + 0L) * 800L)) = menu.m_Image[(x + 1) + (600 - (y + 0) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 0L) + (y + 1L) * 800L)) = menu.m_Image[(x + 0) + (600 - (y + 1) - 1) * 800];
+				*((uint16_t*)lpVideoBuf + ((x + 1L) + (y + 1L) * 800L)) = menu.m_Image[(x + 1) + (600 - (y + 1) - 1) * 800];
 			}
 		}
 	}
@@ -773,11 +797,11 @@ void MenuEventStart(int32_t menu_state)
 		MenuRegistry.Count = 0;
 		MenuRegistry.AddItem("");
 		char tname[128];
-		for (int i = 0; i < 6; i++) {
+		for (auto i = 0U; i < 8U; i++) {
 			g_Profiles[i].m_Name = "";
 			g_Profiles[i].m_RegNumber = i;
-			g_Profiles[i].m_Rank = 0;
-			g_Profiles[i].m_Score = 0;
+			g_Profiles[i].m_Rank = RANK_BEGINNER;
+			g_Profiles[i].m_Score = 0U;
 
 			std::stringstream sn;
 			sn << "trophy" << std::setfill('0') << std::setw(2) << i << ".sav";
@@ -796,14 +820,19 @@ void MenuEventStart(int32_t menu_state)
 	case MENU_OPTIONS: {
 		g_WaitKey = -1;
 
-		for (int m = 0; m < OPT_MAX; m++) {
+		for (auto m = 0U; m < OPT_MAX; m++) {
 			MenuOptions[m].Hilite = -1;
 			MenuOptions[m].Selected = -1;
 		}
 	} break;
+		/****************************************************
+		Hunt License Menu */
 	case MENU_HUNT:
 	{
-		for (int i = 1; i <= 3; i++)
+		g_HuntInfo.first = 0;
+		g_HuntInfo.second = 0;
+
+		for (auto i = 1U; i <= 3U; i++)
 			g_MenuItem.SetIsElementSet(i, false);
 
 		g_MenuItem.SetIsElementSet(g_TimeOfDay + 1, true);
@@ -812,11 +841,11 @@ void MenuEventStart(int32_t menu_state)
 		g_MenuItem.SetIsElementSet(5, g_Options.TranqMode);
 		g_MenuItem.SetIsElementSet(6, g_ObserverMode);
 
-		for (int i = 0; i < 4; i++)
+		for (auto i = 0U; i < 4U; i++)
 			MenuHunt[i].Offset = 0;
 
 		MenuHunt[0].Item.clear();
-		for (unsigned int i = 0; i < g_AreaInfo.size(); i++)
+		for (auto i = 0U; i < g_AreaInfo.size(); i++)
 		{
 			MenuHunt[0].Item.push_back(std::make_pair(g_AreaInfo[i].m_Name, false));
 		}
@@ -824,23 +853,40 @@ void MenuEventStart(int32_t menu_state)
 
 		g_DinoList.clear();
 		MenuHunt[1].Item.clear();
-		for (unsigned int i = 0; i < g_DinoInfo.size(); i++)
+		for (auto i = 0U; i < g_DinoInfo.size(); i++)
 		{
 			DinoInfo& dino = g_DinoInfo.at(i);
 
-			if (dino.m_AI >= 10 && dino.m_Rank <= g_UserProfile.Rank)
+			if (dino.m_AI >= 10)//&& dino.m_Rank <= g_UserProfile.Rank)
 			{
 				// Add to a list
 				g_DinoList.push_back(i);
-				MenuHunt[1].Item.push_back(std::make_pair(g_DinoInfo[i].m_Name, false));
+				MenuHunt[1].Item.push_back(std::make_pair(dino.m_Name, false));
+
+				std::stringstream spp;
+
+				// Load appropriate text
+
+				spp << "huntdat/menu/txt/dino" << (dino.m_AI - 9);
+				if (g_Options.OptSys)
+					spp << ".txu";
+				else
+					spp << ".txm";
+				g_DinoInfo[i].m_Description.clear();
+				LoadText(g_DinoInfo[i].m_Description, spp.str());
 			}
 		}
 		MenuHunt[1].Count = g_AreaInfo.size();
 
 		MenuHunt[2].Item.clear();
-		for (unsigned int i = 0; i < g_WeapInfo.size(); i++)
+		for (auto i = 0U; i < g_WeapInfo.size(); i++)
 		{
 			MenuHunt[2].Item.push_back(std::make_pair(g_WeapInfo[i].m_Name, false));
+			// Load appropriate text
+			std::stringstream spp;
+			spp << "huntdat/menu/txt/weapon" << (i + 1) << ".txt";
+			g_WeapInfo[i].m_Description.clear();
+			LoadText(g_WeapInfo[i].m_Description, spp.str());
 		}
 		MenuHunt[2].Count = g_WeapInfo.size();
 
@@ -850,7 +896,7 @@ void MenuEventStart(int32_t menu_state)
 		the modded .REN allows for. */
 
 		// Reset the states
-		for (int m = 0; m < 4; m++)
+		for (auto m = 0U; m < 4U; m++)
 		{
 			MenuHunt[m].Selected = -1;
 			for (auto i = MenuHunt[m].Item.begin(); i != MenuHunt[m].Item.end(); i++)
@@ -968,40 +1014,6 @@ void LoadGameMenu(int32_t menu)
 }
 
 
-int LaunchProcess(const std::string& exe_name, std::string cmd_line)
-{
-	PROCESS_INFORMATION processInformation = { 0 };
-	STARTUPINFO startupInfo = { 0 };
-	startupInfo.cb = sizeof(startupInfo);
-	uint32_t exitCode = 0;
-
-	ShowWindow(hwndMain, SW_MINIMIZE);
-
-	// Create the process
-	BOOL result = CreateProcess(exe_name.c_str(), const_cast<char*>(cmd_line.c_str()),
-		NULL, NULL, FALSE,
-		NORMAL_PRIORITY_CLASS,
-		NULL, NULL, &startupInfo, &processInformation);
-
-	// Successfully created the process.  Wait for it to finish.
-	WaitForSingleObject(processInformation.hProcess, INFINITE);
-
-	ShowWindow(hwndMain, SW_RESTORE);
-
-	// Get the exit code.
-	result = GetExitCodeProcess(processInformation.hProcess, (DWORD*)&exitCode);
-
-	// Close the handles.
-	CloseHandle(processInformation.hProcess);
-	CloseHandle(processInformation.hThread);
-
-	// Reset to the main menu like the original game does
-	ChangeMenuState(MENU_MAIN);
-
-	return exitCode;
-}
-
-
 /*
 Draw the profile details that appear at the top of the main menu,
 such as Profile Name, Score, Rank.
@@ -1016,14 +1028,16 @@ void DrawMenuProfile()
 	DrawTextShadow(90, 9, g_UserProfile.Name, c);
 
 	ss << g_UserProfile.Score;
-	DrawTextShadow(540, 9, ss.str().c_str(), c);
+	DrawTextShadow(592, 9, ss.str().c_str(), c, DTA_RIGHT);
 
-	/*switch (UserProfile.Rank)
+#ifdef _carnivores1
+	switch (g_UserProfile.Rank)
 	{
 	case 0: DrawTextShadow(344, 9, "Novice", c); break;
 	case 1: DrawTextShadow(344, 9, "Advanced", c); break;
 	case 2: DrawTextShadow(344, 9, "Expert", c); break;
-	}*/
+	}
+#endif
 
 	InterfaceSetFont(NULL);
 }
@@ -1035,6 +1049,8 @@ to draw the profile name and score/rank as an overlay.
 */
 void DrawMenuStatistics()
 {
+	// X 602 - 792
+	RECT rc = { 602, 70, 792, 300 };
 	std::stringstream ss;
 	int c = RGB(239, 228, 176);
 
@@ -1042,40 +1058,40 @@ void DrawMenuStatistics()
 	int  ttm = (int)g_UserProfile.Total.time;
 	int  ltm = (int)g_UserProfile.Last.time;
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Path travelled  "), 78, "Path travelled  ", c);
+	DrawTextShadow(rc.left + 4, 78, "Path travelled  ", c);
 
 	if (g_Options.OptSys)
 		ss << std::setprecision(4) << (g_UserProfile.Last.path / 0.3f) << " ft.";
 	else
 		ss << std::setprecision(4) << (g_UserProfile.Last.path) << " m.";
 
-	DrawTextShadow(718, 78, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 78, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Time hunted  "), 98, "Time hunted  ", c);
+	DrawTextShadow(rc.left + 4, 98, "Time hunted  ", c);
 	ss << std::dec << (ltm / 3600) << ":"; // Hours
 	ss << std::setfill('0') << std::setw(2) << ((ltm % 3600) / 60) << ":"; // Minutes
 	ss << std::setfill('0') << std::setw(2) << (ltm % 60); // Seconds
-	DrawTextShadow(718, 98, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 98, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Shots made  "), 118, "Shots made  ", c);
+	DrawTextShadow(rc.left + 4, 118, "Shots made  ", c);
 	ss << g_UserProfile.Last.smade;
-	DrawTextShadow(718, 118, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 118, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
 	int accuracy = 0;
 	if (g_UserProfile.Last.success > 0)
 		accuracy = ((g_UserProfile.Last.success / g_UserProfile.Last.smade) * 100);
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Accuracy  "), 138, "Accuracy  ", c);
+	DrawTextShadow(rc.left + 4, 138, "Accuracy  ", c);
 	ss << accuracy << "%";
-	DrawTextShadow(718, 138, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 138, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
 	/************************** TOTAL STATS **************************/
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Path travelled  "), 208, "Path travelled  ", c);
+	DrawTextShadow(rc.left + 4, 208, "Path travelled  ", c);
 
 	if (g_UserProfile.Total.path < 1000)
 	{
@@ -1088,28 +1104,39 @@ void DrawMenuStatistics()
 		else                  ss << std::setprecision(4) << (g_UserProfile.Total.path / 1000.f) << " km.";
 	}
 
-	DrawTextShadow(718, 208, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 208, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Time hunted  "), 228, "Time hunted  ", c);
+	DrawTextShadow(rc.left + 4, 228, "Time hunted  ", c);
 	ss << std::dec << (ttm / 3600) << ":"; // Hours
 	ss << std::setfill('0') << std::setw(2) << ((ttm % 3600) / 60) << ":"; // Minutes
 	ss << std::setfill('0') << std::setw(2) << (ttm % 60); // Seconds
-	DrawTextShadow(718, 228, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 228, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Shots made  "), 248, "Shots made  ", c);
+	DrawTextShadow(rc.left + 4, 248, "Shots made  ", c);
 	ss << g_UserProfile.Total.smade;
-	DrawTextShadow(718, 248, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 248, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
 	accuracy = 0;
 	if (g_UserProfile.Total.success > 0 && g_UserProfile.Total.smade > 0)
 		accuracy = static_cast<int>((float)((float)g_UserProfile.Total.success / (float)g_UserProfile.Total.smade) * 100.f);
 
-	DrawTextShadow(718 - GetTextW(hdcCMain, "Accuracy  "), 268, "Accuracy  ", c);
+	DrawTextShadow(rc.left + 4, 268, "Accuracy  ", c);
 	ss << accuracy << "%";
-	DrawTextShadow(718, 268, ss.str(), c);
+	DrawTextShadow(rc.right - 4, 268, ss.str(), c, DTA_RIGHT);
+	ss.str(""); ss.clear();
+
+	DrawTextShadow(rc.left + 4, 288, "Rank:", c);
+
+	switch (g_UserProfile.Rank)
+	{
+	case 0: DrawTextShadow(rc.right - 4, 288, "Novice", c, DTA_RIGHT); break;
+	case 1: DrawTextShadow(rc.right - 4, 288, "Advanced", c, DTA_RIGHT); break;
+	case 2: DrawTextShadow(rc.right - 4, 288, "Expert", c, DTA_RIGHT); break;
+	default: DrawTextShadow(rc.right - 4, 288, "Eldritch", c, DTA_RIGHT); break; // Easter egg/invalid rank
+	}
 
 	DrawMenuProfile();
 }
@@ -1121,7 +1148,7 @@ void DrawMenuCredits()
 {
 	uint32_t color = RGB(239, 228, 176);
 	std::vector<std::string> contributor_list = {
-		"Rexhunter99"
+		/* Please do not remove this name */ "Rexhunter99"
 	};
 
 	InterfaceSetFont(fnt_Small);
@@ -1130,11 +1157,10 @@ void DrawMenuCredits()
 
 	DrawTextShadow(550, 60, "Launcher Code:", color);
 	
-	int i = 0;
+	auto i = 0U;
 	for (auto contributor : contributor_list)
 	{
-		DrawTextShadow(650, 60 + (i * 15), contributor, color); // Please do not remove this name
-		i++;
+		DrawTextShadow(650, 60 + ((i++) * 15), contributor, color);
 	}
 }
 
@@ -1146,21 +1172,63 @@ void DrawMenuHunt()
 
 	InterfaceSetFont(fnt_Big);
 
-	ss << g_UserProfile.Score;
-	DrawTextShadow(335, 38, ss.str(), c);
+	ss << (min(9999, max(0, g_UserProfile.Score)));
+	DrawTextShadow(328 + 4, 38, ss.str(), c, DTA_LEFT);
 	ss.str(""); ss.clear();
 
-	ss << ((int32_t)(g_UserProfile.Score - g_ScoreDebit)); // Subtract the costs of selections
-	DrawTextShadow(406, 38, ss.str(), c);
+	ss << (min(9999, max(-999, (g_UserProfile.Score - g_ScoreDebit))));
+	DrawTextShadow(472 - 4, 38, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
 	InterfaceSetFont(fnt_Midd);
 
-	if (MenuHunt[0].Selected != -1)
+
+	if (g_HuntInfo.first == 0) // Areas
 	{
-		for (unsigned i = 0; i < g_AreaInfo[MenuHunt[0].Selected].m_Description.size(); i++)
+		for (auto i = 0U; i < g_AreaInfo[g_HuntInfo.second].m_Description.size(); i++)
 		{
-			DrawTextShadow(424, 96 + ((i) * 16), g_AreaInfo[MenuHunt[0].Selected].m_Description[i], c);
+			DrawTextShadow(424, 96 + ((i) * 16), g_AreaInfo[g_HuntInfo.second].m_Description[i], c);
+		}
+	}
+	else if (g_HuntInfo.first == 1) // Dinosaurs
+	{
+		unsigned d = g_DinoList[g_HuntInfo.second];
+		if (!(g_DinoInfo[d].m_Price >= 1000 && g_UserProfile.Score < 1000))
+		{
+			for (auto i = 0U; i < g_DinoInfo[d].m_Description.size(); i++)
+			{
+				DrawTextShadow(424, 96 + ((i) * 16), g_DinoInfo[d].m_Description[i], c);
+			}
+
+			DrawTextShadow(424, 210 + (0 * 16), "Sight:", c);
+			DrawTextShadow(424, 210 + (1 * 16), "Hearing:", c);
+			DrawTextShadow(424, 210 + (2 * 16), "Scents:", c);
+
+			DrawProgressBar(424 + 80, 210 + (0 * 16), min(1.0f, max(0.0f, g_DinoInfo[d].m_LookK)) * 2.f);
+			DrawProgressBar(424 + 80, 210 + (1 * 16), min(1.0f, max(0.0f, g_DinoInfo[d].m_HearK)) * 2.f);
+			DrawProgressBar(424 + 80, 210 + (2 * 16), min(1.0f, max(0.0f, g_DinoInfo[d].m_SmellK)) * 2.f);
+		}
+	}
+	else if (g_HuntInfo.first == 2) // Weapons
+	{
+		for (auto i = 0U; i < g_WeapInfo[g_HuntInfo.second].m_Description.size(); i++)
+		{
+			DrawTextShadow(424, 96 + ((i) * 16), g_WeapInfo[g_HuntInfo.second].m_Description[i], c);
+		}
+
+		DrawTextShadow(424, 210 + (0 * 16), "Power:", c);
+		DrawTextShadow(424, 210 + (1 * 16), "Accuracy:", c);
+		DrawTextShadow(424, 210 + (2 * 16), "Volume:", c);
+
+		DrawProgressBar(424 + 80, 210 + (0 * 16), min(2.0f, max(0.0f, g_WeapInfo[g_HuntInfo.second].m_Power)));
+		DrawProgressBar(424 + 80, 210 + (1 * 16), min(2.0f, max(0.0f, g_WeapInfo[g_HuntInfo.second].m_Prec)));
+		DrawProgressBar(424 + 80, 210 + (2 * 16), min(2.0f, max(0.0f, g_WeapInfo[g_HuntInfo.second].m_Loud)));
+	}
+	else if (g_HuntInfo.first == 3) // Accessories
+	{
+		for (auto i = 0U; i < g_UtilInfo[g_HuntInfo.second].m_Description.size(); i++)
+		{
+			DrawTextShadow(424, 96 + ((i) * 16), g_UtilInfo[g_HuntInfo.second].m_Description[i], c);
 		}
 	}
 
@@ -1298,7 +1366,7 @@ void DrawMenuRegistry()
 		g_HiliteProfileIndex = g_ProfileIndex;
 
 		// 320, 370
-		for (int i = 0; i < 6; i++)
+		for (auto i = 0U; i < 7U; i++)
 		{
 			color = 0xB0B070; // Base colour
 
@@ -1337,7 +1405,7 @@ void MenuEventInput(int32_t menu)
 	uint8_t id = g_MenuItem.GetID(g_CursorPos.x / 2, g_CursorPos.y / 2);
 
 	if (g_KeyboardState[VK_LBUTTON] & 128) {
-		PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+		//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_NODEFAULT | SND_ASYNC | SND_FILENAME);
 		//AddVoice(g_MenuSound_Go.m_Length, g_MenuSound_Go.m_Data);
 	}
 
@@ -1461,6 +1529,7 @@ void MenuEventInput(int32_t menu)
 			if (g_KeyboardState[VK_LBUTTON] & 128)
 			{
 				WaitForMouseRelease();
+				TrophySave(g_UserProfile); // Save all the settings
 				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				ChangeMenuState(MENU_MAIN);
 			}
@@ -1532,17 +1601,17 @@ void MenuEventInput(int32_t menu)
 
 							mo.Selected = mo.Hilite;
 
-							if (mo.Hilite < MenuOptions[OPT_KEYBINDINGS].Item.size() - 2)
+							if (static_cast<size_t>(mo.Hilite) < MenuOptions[OPT_KEYBINDINGS].Item.size() - 2)
 							{
 								WaitForMouseRelease();
 								g_WaitKey = mo.Hilite;
 							}
-							else if (mo.Hilite == MenuOptions[OPT_KEYBINDINGS].Item.size() - 2) // Mouse Y-Axis Inverted
+							else if (static_cast<int>(mo.Hilite) == MenuOptions[OPT_KEYBINDINGS].Item.size() - 2) // Mouse Y-Axis Inverted
 							{
 								WaitForMouseRelease();
 								g_Options.MouseInvert = !g_Options.MouseInvert;
 							}
-							else if (mo.Hilite == MenuOptions[OPT_KEYBINDINGS].Item.size() - 1) // Mouse Sensitivty Slider
+							else if (static_cast<int>(mo.Hilite) == MenuOptions[OPT_KEYBINDINGS].Item.size() - 1) // Mouse Sensitivty Slider
 							{
 								g_Options.MouseSensitivity = (int)(v * 255.f);
 							}
@@ -1630,7 +1699,12 @@ void MenuEventInput(int32_t menu)
 
 			if (index < g_AreaInfo.size())
 			{
-				g_HuntSelectPic = &g_AreaInfo[index].m_Thumbnail;
+				if (g_AreaInfo[index].m_Price >= 1000 && g_UserProfile.Score < 1000)
+					g_HuntSelectPic = &g_AreaInfo[index].m_ThumbnailHidden;
+				else
+					g_HuntSelectPic = &g_AreaInfo[index].m_Thumbnail;
+				g_HuntInfo.first = 0; // Areas
+				g_HuntInfo.second = index;
 
 				if ((g_KeyboardState[VK_LBUTTON] & 128) && score >= g_AreaInfo[index].m_Price)
 				{
@@ -1646,8 +1720,6 @@ void MenuEventInput(int32_t menu)
 					MenuHunt[0].Item[index].second = true;
 					MenuHunt[0].Selected = index;
 
-					g_HuntSelectPic = &g_AreaInfo[index].m_Thumbnail;
-
 					g_ScoreDebit = CalculateDebit();
 				}
 			}
@@ -1661,7 +1733,12 @@ void MenuEventInput(int32_t menu)
 
 			if (index < MenuHunt[1].Item.size())
 			{
-				g_HuntSelectPic = &g_DinoInfo[g_DinoList[index]].m_Thumbnail;
+				if (g_DinoInfo[g_DinoList[index]].m_Price >= 1000 && g_UserProfile.Score < 1000)
+					g_HuntSelectPic = &g_DinoInfo[g_DinoList[index]].m_ThumbnailHidden;
+				else
+					g_HuntSelectPic = &g_DinoInfo[g_DinoList[index]].m_Thumbnail;
+				g_HuntInfo.first = 1; // Dinos
+				g_HuntInfo.second = index;
 
 				if ((g_KeyboardState[VK_LBUTTON] & 128))
 				{
@@ -1690,6 +1767,12 @@ void MenuEventInput(int32_t menu)
 
 			if (index < MenuHunt[2].Item.size())
 			{
+				if (g_WeapInfo[index].m_Price >= 1000 && g_UserProfile.Score < 1000)
+					g_HuntSelectPic = &g_WeapInfo[index].m_ThumbnailHidden;
+				else
+					g_HuntSelectPic = &g_WeapInfo[index].m_Thumbnail;
+				g_HuntInfo.first = 2; // Weapons
+				g_HuntInfo.second = index;
 
 				if ((g_KeyboardState[VK_LBUTTON] & 128))
 				{
@@ -1717,6 +1800,10 @@ void MenuEventInput(int32_t menu)
 
 			if (index < MenuHunt[3].Item.size())
 			{
+				g_HuntSelectPic = &g_UtilInfo[index].m_Thumbnail;
+				g_HuntInfo.first = 3; // Accessories
+				g_HuntInfo.second = index;
+
 				if ((g_KeyboardState[VK_LBUTTON] & 128))
 				{
 					WaitForMouseRelease();
@@ -1796,10 +1883,10 @@ void MenuEventInput(int32_t menu)
 
 #ifdef _iceage
 				if (MenuHunt[3].Item[4].second)
-					params << " -resupply";
+					params << " " << g_UtilInfo[4].m_Command;
 #endif //_iceage
 				if (MenuHunt[3].Item[3].second)
-					params << " -double";
+					params << " " << g_UtilInfo[3].m_Command;
 				if (g_Options.RadarMode)
 					params << " -radar";
 				if (g_Options.TranqMode)
@@ -1815,8 +1902,8 @@ void MenuEventInput(int32_t menu)
 
 				TrophySave(g_UserProfile); // Save all the settings
 
-				std::cout << "Execute: [" << renderer.str() << " " << params.str() << "]" << std::endl;
-				//LaunchProcess(renderer.str(), params.str());
+				std::cout << "Launching...  `> " << renderer.str() << " " << params.str() << "`" << std::endl;
+				LaunchProcess(renderer.str(), params.str());
 			}
 		}
 	}
@@ -1832,7 +1919,21 @@ void MenuEventInput(int32_t menu)
 				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
 				if (id == 1) { ChangeMenuState(MENU_HUNT); }
 				else if (id == 2) { ChangeMenuState(MENU_OPTIONS); }
-				else if (id == 3) { /*LaunchProcess("", "reg=g_UserProfile.RegNumber prj=trophy din=0 wep=0 dtm=1");*/ }
+				else if (id == 3) {
+					std::stringstream params("");
+
+					params << "reg=" << g_UserProfile.RegNumber;
+					params << " prj=trophy";
+					params << " dtm=" << 1;
+#ifdef _DEBUG
+					params << " -debug";
+#endif //_DEBUG
+					std::stringstream renderer("");
+					renderer << g_RendererFile[g_Options.RenderAPI] << ".ren";
+
+					std::cout << "Execute: [" << renderer.str() << " " << params.str() << "]" << std::endl;
+					LaunchProcess(renderer.str(), params.str());
+				}
 				else if (id == 4) { ChangeMenuState(MENU_CREDITS); }
 				else if (id == 5) { ChangeMenuState(MENU_QUIT); }
 				else if (id == 6) { ChangeMenuState(MENU_STATISTICS); }
@@ -1875,7 +1976,7 @@ void DrawMenuOptions()
 	InterfaceSetFont(g_FontOptions);
 
 	// Game options
-	for (int i = 0; i < MenuOptions[OPT_GAME].Count; i++) {
+	for (auto i = 0U; i < MenuOptions[OPT_GAME].Item.size(); i++) {
 		MenuSet& menu = MenuOptions[OPT_GAME];
 		int x0 = menu.Rect.left + menu.Padding;// .x0;
 		int x1 = menu.Rect.right - menu.Padding;// .x0;
@@ -1896,7 +1997,7 @@ void DrawMenuOptions()
 	}
 
 	// Control key bindings
-	for (unsigned i = 0; i < MenuOptions[OPT_KEYBINDINGS].Count; i++) {
+	for (auto i = 0U; i < MenuOptions[OPT_KEYBINDINGS].Item.size(); i++) {
 		MenuSet& menu = MenuOptions[OPT_KEYBINDINGS];
 		int x0 = menu.Rect.left + menu.Padding;// .x0;
 		int x1 = menu.Rect.right - menu.Padding;// .x0;
@@ -1924,7 +2025,7 @@ void DrawMenuOptions()
 	}
 
 	// Video/Graphics options
-	for (int i = 0; i < MenuOptions[OPT_VIDEO].Count; i++) {
+	for (auto i = 0U; i < MenuOptions[OPT_VIDEO].Item.size(); i++) {
 		MenuSet& menu = MenuOptions[OPT_VIDEO];
 		int x0 = menu.Rect.left + menu.Padding;// x0;
 		int x1 = menu.Rect.right - menu.Padding;// x0;

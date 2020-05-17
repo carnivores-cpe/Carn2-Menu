@@ -35,11 +35,21 @@ void CreateLog()
 #endif //_DEBUG
 
 #ifdef _iceage
-	std::cout << "Carnivores: Ice Age - Menu\n Version: " << VERSION_MAJOR << "." << VERSION_MINOR << " ";
-#else
-	std::cout << "Carnivores 2 - Menu\n Version: " << VERSION_MAJOR << "." << VERSION_MINOR << " ";
-#endif
-	std::cout << __DATE__ << "\n" << std::setfill('=') << std::setw(40) << "=" << std::endl;
+	std::cout << "Carnivores: Ice Age - Menu\n";
+#else // _iceage
+	std::cout << "Carnivores 2 - Menu\n";
+#endif // !_iceage
+	std::cout << " Version: " << VERSION_MAJOR << "." << VERSION_MINOR << " ";
+#ifdef _DEBUG
+	std::cout << "DEBUG ";
+#endif // _DEBUG
+#ifdef _W64
+	std::cout << "64-Bit ";
+#else // !_W64
+	std::cout << "32-Bit "
+#endif // _W64
+	std::cout << __DATE__ << std::endl;
+	PrintLogSeparater();
 }
 
 
@@ -49,6 +59,58 @@ void CloseLogs()
 	std::cout.rdbuf(g_COutBuf);
 	g_LogFile.close();
 #endif //_DEBUG
+}
+
+
+void PrintLogSeparater()
+{
+	std::cout << std::setfill('=') << std::setw(40) << "=" << std::endl;
+}
+
+
+int LaunchProcess(const std::string& exe_name, std::string cmd_line)
+{
+	PROCESS_INFORMATION processInformation = { 0 };
+	STARTUPINFO startupInfo = { 0 };
+	startupInfo.cb = sizeof(startupInfo);
+	uint32_t exitCode = 0;
+
+	ShowWindow(hwndMain, SW_MINIMIZE);
+
+	// Create the process
+	BOOL result = CreateProcess(exe_name.c_str(), const_cast<char*>(cmd_line.c_str()),
+		NULL, NULL, FALSE,
+		NORMAL_PRIORITY_CLASS,
+		NULL, NULL, &startupInfo, &processInformation);
+
+	if (!result)
+	{
+		DWORD error = GetLastError();
+		std::cout << "CreateProcess(" << exe_name << ", " << cmd_line << ") failed with error code: " << error << std::endl;
+	}
+
+	// Successfully created the process.  Wait for it to finish.
+	WaitForSingleObject(processInformation.hProcess, INFINITE);
+
+	ShowWindow(hwndMain, SW_RESTORE);
+
+	// Get the exit code.
+	result = GetExitCodeProcess(processInformation.hProcess, (DWORD*)&exitCode);
+
+	if (!result)
+	{
+		std::cout << "! Warning !\nThe process exited with error code: " << static_cast<int>(result) << "\n";
+		std::cout << " Check the associated `carnivor.log` for more details, or debug the binary `" << exe_name << "`" << std::endl;
+	}
+
+	// Close the handles.
+	CloseHandle(processInformation.hProcess);
+	CloseHandle(processInformation.hThread);
+
+	// Reset to the main menu like the original game does
+	ChangeMenuState(MENU_MAIN);
+
+	return exitCode;
 }
 
 
@@ -98,7 +160,7 @@ LRESULT CALLBACK WindowProcedure(HWND hwnd, UINT message, WPARAM wParam, LPARAM 
 
 std::string errordialog_str = "";
 
-BOOL CALLBACK ErrorDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+INT_PTR CALLBACK ErrorDialogProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
 	switch (uMsg)
 	{
@@ -128,9 +190,11 @@ void ShowErrorMessage(const std::string& error_text)
 
 	if (DialogBox(hInst, MAKEINTRESOURCE(IDD_ERROR_DIALOG), hwndMain, &ErrorDialogProc) == IDOK)
 	{
+		// Save the contents to an 'error.txt' dump
 	}
 	else
 	{
+		// Just halt the program execution (normal behaviour)
 	}
 }
 
@@ -138,7 +202,7 @@ void ShowErrorMessage(const std::string& error_text)
 bool CreateMainWindow()
 {
 	WNDCLASSEX wc;
-	ZeroMemory(&wc, sizeof(WNDCLASSEX));
+	memset(&wc, 0, sizeof(WNDCLASSEX));
 
 	wc.cbSize = sizeof(WNDCLASSEX);
 	wc.cbClsExtra = 0;
@@ -146,8 +210,8 @@ bool CreateMainWindow()
 	wc.style = CS_OWNDC;
 	wc.lpfnWndProc = WindowProcedure;
 	wc.hInstance = (HINSTANCE)hInst;
-	wc.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON1));
-	wc.hIconSm = LoadIcon(hInst, MAKEINTRESOURCE(IDI_ICON1));
+	wc.hIcon = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_ICON1));
+	wc.hIconSm = LoadIcon(wc.hInstance, MAKEINTRESOURCE(IDI_ICON1));
 	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
 	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
 	wc.lpszMenuName = NULL;
@@ -162,9 +226,9 @@ bool CreateMainWindow()
 
 	hwndMain = CreateWindowEx(0,
 		wc.lpszClassName,
-		"Carnivores 2",
-		WS_BORDER | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE,// |  WS_POPUP,
-		0, 0, 800, 600,
+		"",
+		WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_VISIBLE |  WS_POPUP,
+		CW_USEDEFAULT, 0, 800, 600,
 		HWND_DESKTOP, 0, hInst, nullptr
 	);
 
@@ -187,14 +251,25 @@ bool CreateMainWindow()
 	SetWindowPos(hwndMain, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
 	UpdateWindow(hwndMain);
 
+	/*
+	FIX: Fixes the window not having a title.
+	*/
+#ifdef _iceage
+	SetWindowText(hwndMain, "Carnivores: Ice Age - Menu");
+#else // !_iceage
+	SetWindowText(hwndMain, "Carnivores 2 - Menu");
+#endif
+
 	return true;
 }
 
 
 #ifdef _DEBUG
 int main(int argc, char* argv[]) {
+	hInst = GetModuleHandle(NULL);
 #else
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLine, int nCmdShow) {
+	hInst = hInstance;
 #endif
 	MSG msg = MSG();
 	Timer::Init();
@@ -206,7 +281,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 		CreateMainWindow();
 		InitNetwork();
 		InitInterface();
-		InitAudioSystem(hwndMain, NULL, 0);
+		//InitAudioSystem(hwndMain, NULL, 0);
 
 		LoadResourcesScript();
 		LoadResources();
@@ -265,7 +340,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpszCmdLi
 	}
 
 	ReleaseResources();
-	Audio_Shutdown();
+	//Audio_Shutdown();
 	ShutdownInterface();
 	ShutdownNetwork();
 	DestroyWindow(hwndMain); hwndMain = HWND_DESKTOP;

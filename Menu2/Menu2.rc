@@ -10,7 +10,11 @@
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+#ifdef _iceage
+IDI_ICON1               ICON                    "iceage.ico"
+#else // !_iceage
 IDI_ICON1               ICON                    "action.ico"
+#endif
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -143,7 +147,11 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_AUS
 
 // Icon with lowest ID value placed first to ensure application icon
 // remains consistent on all systems.
+#ifdef _iceage
+IDI_ICON1               ICON                    "iceage.ico"
+#else // !_iceage
 IDI_ICON1               ICON                    "action.ico"
+#endif
 
 
 /////////////////////////////////////////////////////////////////////////////

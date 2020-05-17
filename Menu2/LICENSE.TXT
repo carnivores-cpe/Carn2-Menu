@@ -1,0 +1,9 @@
+You are hereby permitted to use the resources within this project, to create new/modified versions of the Carnivores menus for public use, all modifications are permitted except for the removal of creditation to contributors.
+
+You are not permitted to sell any products of the code, nor advertise them as purely your own creations.
+
+You are not permitted to redistribute the source-code outside of GitHub.
+
+You are not permitted to mirror the source-code.
+
+All derived works do NOT need to be publically available to the general public for modification, this includes binaries produced by and the source-code itself.

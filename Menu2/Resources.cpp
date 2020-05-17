@@ -199,11 +199,8 @@ void ReadCharacters(FILE* stream)
 
 				if (strstr(line, "file"))
 				{
-					/*int inc = atoi(line);
-					char error[256];
-					sprintf(error, "The file value is integer %d", inc);
-					MessageBox(hwndMain, error, "Integer", MB_OK);*/
-					value = strstr(line, "'"); if (!value) throw std::runtime_error("Script loading error");
+					value = strstr(line, "'");
+					if (!value) throw std::runtime_error("Script loading error");
 					value[strlen(value) - 2] = 0;
 					di.m_FilePath = &value[1];
 				}
@@ -222,6 +219,13 @@ void ReadCharacters(FILE* stream)
 				std::stringstream spp;
 				spp << "huntdat/menu/pics/dino" << (di.m_AI - 9) << ".tga";
 				LoadPicture(di.m_Thumbnail, spp.str());
+
+				spp.str(""); spp.clear();
+				spp << "huntdat/menu/pics/dino" << (di.m_AI - 9) << "no.tga";
+				if (!LoadPicture(di.m_ThumbnailHidden, spp.str()))
+				{
+					di.m_ThumbnailHidden = di.m_Thumbnail;
+				}
 			}
 
 			g_DinoInfo.push_back(di);
@@ -378,38 +382,43 @@ void LoadResources()
 	// TODO: enable these and use them instead of GDI drawing for the trackbars
 	//LoadPicture(g_TrackBar[0], "huntdat/menu/sl_bar.tga");
 	//LoadPicture(g_TrackBar[1], "huntdat/menu/sl_but.tga");
-
+	
 	UtilInfo ui;
 	ui.m_Name = "Camoflauge";
-	ui.m_Description = LoadText("huntdat/menu/txt/camoflag.nfo");
+	LoadText(ui.m_Description, "huntdat/menu/txt/camoflag.nfo");
 	ui.m_Command = "";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip1.tga");
 	g_UtilInfo.push_back(ui);
+	ui.m_Description.clear();
 
 	ui.m_Name = "GPS Radar";
-	ui.m_Description = LoadText("huntdat/menu/txt/radar.nfo");
+	LoadText(ui.m_Description, "huntdat/menu/txt/radar.nfo");
 	ui.m_Command = "-radar";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip2.tga");
 	g_UtilInfo.push_back(ui);
+	ui.m_Description.clear();
 
 	ui.m_Name = "Cover Scent";
-	ui.m_Description = LoadText("huntdat/menu/txt/scent.nfo");
+	LoadText(ui.m_Description, "huntdat/menu/txt/scent.nfo");
 	ui.m_Command = "";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip3.tga");
 	g_UtilInfo.push_back(ui);
+	ui.m_Description.clear();
 
 	ui.m_Name = "Double Ammo";
-	ui.m_Description = LoadText("huntdat/menu/txt/double.nfo");
+	LoadText(ui.m_Description, "huntdat/menu/txt/double.nfo");
 	ui.m_Command = "";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip4.tga");
 	g_UtilInfo.push_back(ui);
+	ui.m_Description.clear();
 
 #ifdef _iceage
 	ui.m_Name = "Ammo Resupply";
-	ui.m_Description = LoadText("huntdat/menu/txt/supply.nfo");
-	ui.m_Command = "";
+	LoadText(ui.m_Description, "huntdat/menu/txt/resupply.nfo");
+	ui.m_Command = "-supply -resupply";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip5.tga");
 	g_UtilInfo.push_back(ui);
+	ui.m_Description.clear();
 #endif //_iceage
 
 	LoadWave(g_MenuSound_Go, "huntdat/soundfx/menugo.wav");
@@ -548,7 +557,7 @@ bool ReadTGAFile(const std::string& path, TargaImage& tga)
 	std::ifstream fs(path, std::ios::binary);
 
 	if (!fs.is_open()) {
-		std::cout << "Failed to open TGA file: " << path << std::endl;
+		std::cout << "Warning: Failed to open TGA file: " << path << std::endl;
 		return false;
 	}
 
@@ -579,10 +588,12 @@ bool ReadTGAFile(const std::string& path, TargaImage& tga)
 }
 
 
-void LoadPicture(Picture& pic, const std::string& fpath)
+bool LoadPicture(Picture& pic, const std::string& fpath)
 {
 	TargaImage tga;
-	if (ReadTGAFile(fpath, tga)) {
+	
+	if (ReadTGAFile(fpath, tga))
+	{
 
 		pic.m_Width = tga.m_Header.tgaWidth;
 		pic.m_Height = tga.m_Header.tgaHeight;
@@ -592,13 +603,16 @@ void LoadPicture(Picture& pic, const std::string& fpath)
 
 		pic.m_Data = new uint16_t[pic.m_Width * pic.m_Height];
 		memcpy(pic.m_Data, tga.m_Data, pic.m_Width * pic.m_Height * sizeof(uint16_t));
+
+		return true;
 	}
+
+	return false;
 }
 
 
-std::vector<std::string> LoadText(const std::string& path)
+bool LoadText(std::vector<std::string>& txt, const std::string& path)
 {
-	std::vector<std::string> txt;
 	std::ifstream tf(path);
 
 	if (tf.is_open())
@@ -610,13 +624,14 @@ std::vector<std::string> LoadText(const std::string& path)
 			txt.push_back(line);
 		}
 		tf.close();
+		return true;
 	}
 	else
 	{
 		std::cout << "LoadText() : Unable to open text file for reading: '" << path << "'" << std::endl;
 	}
 
-	return txt;
+	return false;
 }
 
 
@@ -783,4 +798,20 @@ Picture::~Picture()
 {
 	if (m_Data)
 		delete[] m_Data;
+}
+
+
+Picture& Picture::operator= (const Picture& rhs)
+{
+	m_Data = nullptr;
+
+	if (rhs.m_Width && rhs.m_Height && rhs.m_Data) {
+		m_Data = new uint16_t[rhs.m_Width * rhs.m_Height];
+		memcpy(m_Data, rhs.m_Data, (rhs.m_Width * 2u) * rhs.m_Height);
+	}
+
+	m_Width = rhs.m_Width;
+	m_Height = rhs.m_Height;
+
+	return *this;
 }
