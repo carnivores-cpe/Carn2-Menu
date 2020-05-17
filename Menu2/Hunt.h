@@ -270,6 +270,31 @@ public:
 	Picture m_CallIcon;	//<- Icon associated with this species
 	Picture m_Thumbnail; //<- Menu thumbnail associated with this species
 	Picture m_ThumbnailHidden; //<- 'Hidden' Menu thumbnail associated with this species
+
+	DinoInfo() :
+		m_Name(""),
+		m_FilePath(""),
+		m_PicturePath(""),
+		m_Description(),
+		m_BaseHealth(0),
+		m_AI(0),
+		m_DangerCall(false),
+		m_Mass(0.0f),
+		m_Length(0.0f),
+		m_Radius(0.0f),
+		m_SmellK(0.0f),
+		m_HearK(0.0f),
+		m_LookK(0.0f),
+		m_ShDelta(0.0f),
+		m_BaseScale(1000),
+		m_ScaleA(800),
+		m_BaseScore(0),
+		m_Price(0),
+		m_Rank(RANK_NOVICE),
+		m_CallIcon(),
+		m_Thumbnail(),
+		m_ThumbnailHidden()
+	{}
 };
 
 
@@ -298,12 +323,40 @@ public:
 
 	Picture m_Thumbnail; // Preview icon/image associated with this area
 	Picture m_ThumbnailHidden; // 'Hidden' Preview icon/image associated with this area
+
+	WeapInfo() :
+		m_Name(""),
+		m_FilePath(""),
+		m_BulletFilePath(""),
+		m_Description(),
+		m_Power(0.0f),
+		m_Prec(0.0f),
+		m_Loud(0.0f),
+		m_Rate(0.0f),
+		m_Recoil(0.0f),
+		m_Optic(0.0f),
+		m_Shots(0),
+		m_Fall(0),
+		m_TraceC(0),
+		m_Reload(0),
+		m_Price(0),
+		m_Rank(RANK_NOVICE),
+		m_Thumbnail(),
+		m_ThumbnailHidden()
+	{}
 };
 
 
 class AreaInfo
 {
 public:
+	/*
+	Added this member after P.Rex's Mandibles mod was crashing the menu.
+	P.Rex's _RES had 8 areas listed in the prices{} block, but only had
+	6 areas to actually play in.
+	*/
+	bool m_Valid; // Is this a valid area?
+
 	std::string	m_Name; // Area Name
 	std::string	m_ProjectName; // MAP & RSC filename
 
@@ -318,6 +371,7 @@ public:
 	Picture m_ThumbnailHidden; // 'Hidden' Preview icon/image associated with this area
 
 	AreaInfo() :
+		m_Valid(false),
 		m_Name(""),
 		m_ProjectName(""),
 		m_Description(),
@@ -329,6 +383,7 @@ public:
 	}
 
 	AreaInfo(const AreaInfo& a) :
+		m_Valid(a.m_Valid),
 		m_Name(a.m_Name),
 		m_ProjectName(a.m_ProjectName),
 		m_Description(a.m_Description),

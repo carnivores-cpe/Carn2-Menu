@@ -1170,14 +1170,19 @@ void DrawMenuHunt()
 	uint32_t c = RGB(239, 228, 176);
 	std::stringstream ss;
 
+	if (g_HuntSelectPic != nullptr)
+	{
+		DrawPicture(38, 73, *g_HuntSelectPic);
+	}
+
 	InterfaceSetFont(fnt_Big);
 
 	ss << (min(9999, max(0, g_UserProfile.Score)));
-	DrawTextShadow(328 + 4, 38, ss.str(), c, DTA_LEFT);
+	DrawTextShadow(328 + 8, 38, ss.str(), c, DTA_LEFT);
 	ss.str(""); ss.clear();
 
 	ss << (min(9999, max(-999, (g_UserProfile.Score - g_ScoreDebit))));
-	DrawTextShadow(472 - 4, 38, ss.str(), c, DTA_RIGHT);
+	DrawTextShadow(472 - 8, 38, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
 	InterfaceSetFont(fnt_Midd);
@@ -1185,9 +1190,9 @@ void DrawMenuHunt()
 
 	if (g_HuntInfo.first == 0) // Areas
 	{
-		for (auto i = 0U; i < g_AreaInfo[g_HuntInfo.second].m_Description.size(); i++)
+		for (auto i = 1U; i < g_AreaInfo[g_HuntInfo.second].m_Description.size(); i++)
 		{
-			DrawTextShadow(424, 96 + ((i) * 16), g_AreaInfo[g_HuntInfo.second].m_Description[i], c);
+			DrawTextShadow(424, 96 + ((i-1) * 16), g_AreaInfo[g_HuntInfo.second].m_Description[i], c);
 		}
 	}
 	else if (g_HuntInfo.first == 1) // Dinosaurs
@@ -1230,11 +1235,6 @@ void DrawMenuHunt()
 		{
 			DrawTextShadow(424, 96 + ((i) * 16), g_UtilInfo[g_HuntInfo.second].m_Description[i], c);
 		}
-	}
-
-	if (g_HuntSelectPic != nullptr)
-	{
-		DrawPicture(38, 73, *g_HuntSelectPic);
 	}
 
 	InterfaceSetFont(fnt_Small);
@@ -1900,10 +1900,17 @@ void MenuEventInput(int32_t menu)
 				std::stringstream renderer("");
 				renderer << g_RendererFile[g_Options.RenderAPI] << ".ren";
 
-				TrophySave(g_UserProfile); // Save all the settings
-
-				std::cout << "Launching...  `> " << renderer.str() << " " << params.str() << "`" << std::endl;
-				LaunchProcess(renderer.str(), params.str());
+				if (wep && din)
+				{
+					TrophySave(g_UserProfile); // Save all the settings
+					std::cout << "Launching...  `> " << renderer.str() << " " << params.str() << "`" << std::endl;
+					LaunchProcess(renderer.str(), params.str());
+					TrophyLoad(g_UserProfile, g_UserProfile.RegNumber); // Load the changes
+				}
+				else
+				{
+					ShowErrorMessage("You need to select at least:\r\n 1x Creature\r\n 1x Weapon");
+				}
 			}
 		}
 	}
@@ -1932,7 +1939,9 @@ void MenuEventInput(int32_t menu)
 					renderer << g_RendererFile[g_Options.RenderAPI] << ".ren";
 
 					std::cout << "Execute: [" << renderer.str() << " " << params.str() << "]" << std::endl;
+					TrophySave(g_UserProfile); // Save the changes
 					LaunchProcess(renderer.str(), params.str());
+					TrophyLoad(g_UserProfile, g_UserProfile.RegNumber); // Load the changes
 				}
 				else if (id == 4) { ChangeMenuState(MENU_CREDITS); }
 				else if (id == 5) { ChangeMenuState(MENU_QUIT); }

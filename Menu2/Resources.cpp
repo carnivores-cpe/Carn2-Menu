@@ -18,6 +18,35 @@
 #include <cstdlib>
 
 
+class script_error : public std::exception
+{
+private:
+	std::string m_What;
+	uint32_t	m_Line;
+	std::string m_Where;
+
+public:
+
+	script_error(const std::string& _what, const std::string& _where = "", uint32_t _line = 0) :
+		m_What(_what),
+		m_Line(_line),
+		m_Where(_where)
+	{}
+
+	std::string what()
+	{
+		std::stringstream ss;
+		ss << "Where: " << m_Where << "\r\n";
+		ss << "At Line: " << m_Line << "\r\n";
+		ss << m_What << "\r\n";
+		return ss.str();
+	}
+};
+
+
+uint32_t g_ScriptLine = 0;
+
+
 void ReadWeapons(FILE*);
 void ReadCharacters(FILE*);
 
@@ -43,32 +72,32 @@ AreaInfo MakeOldAreaInfo(int index, int price)
 
 	// Load the description
 	ss << "huntdat/menu/txt/area" << index << ".txt";
-	std::ifstream txt(ss.str());
+	std::ifstream f(ss.str());
 
-	if (txt.is_open())
+	if (f.is_open())
 	{
-		while (!txt.eof())
+		while (!f.eof())
 		{
 			std::string line = "";
-			std::getline(txt, line);
+			std::getline(f, line);
 			a.m_Description.push_back(line);
 		}
-		txt.close();
+		f.close();
 	}
 	else
 	{
-		std::string txt_s = ss.str();
-		ss.str(""); ss.clear();
-		ss << "MakeOldAreaInfo(" << index << "," << price << ") -> Failed to open the description file: '" << txt_s << "'";
-		throw std::runtime_error(ss.str());
-		return a;
+		std::cout << "! Warning !\tIn `MakeOldAreaInfo(index=" << index << ", price=" << price << ")`\r\n";
+		std::cout << " -> Failed to open the area description file : '" << ss.str() << "'" << std::endl;
 	}
+
+	ss.str(""); ss.clear();
+	ss << "Area " << index;
 
 	// Set the readable name
 	if (a.m_Description.size() > 0)
 		a.m_Name = a.m_Description[0];
 	else
-		a.m_Name = "(Unknown)";
+		a.m_Name = ss.str();
 
 	// Set the project name (filename for .MAP and .RSC files)
 	ss.str(""); ss.clear();
@@ -80,6 +109,13 @@ AreaInfo MakeOldAreaInfo(int index, int price)
 	ss << "huntdat/menu/pics/area" << index << ".tga";
 	LoadPicture(a.m_Thumbnail, ss.str());
 
+	// Make sure the map exists
+	ss.str(""); ss.clear();
+	ss << "huntdat/areas/area" << index << ".map";
+	f.open(ss.str());
+	a.m_Valid = f.is_open();
+	f.close();
+
 	return a;
 }
 
@@ -87,9 +123,11 @@ AreaInfo MakeOldAreaInfo(int index, int price)
 void ReadWeapons(FILE* stream)
 {
 	char line[256], * value;
+	std::string sline = "";
 
 	while (fgets(line, 255, stream))
 	{
+		g_ScriptLine++;
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
@@ -99,9 +137,16 @@ void ReadWeapons(FILE* stream)
 
 			while (fgets(line, 255, stream))
 			{
-				if (strstr(line, "}")) { break; }
+				g_ScriptLine++;
+				sline = line;
+
+				if (strstr(line, "}")) break;
+				if (sline.empty()) continue;
+				if (line[0] == ';') continue;
+
 				value = strstr(line, "=");
-				if (!value) throw std::runtime_error("Script loading error");
+				if (!value)
+					throw script_error("Was expecting member assignment.", "ReadWeapons()", g_ScriptLine);
 				value++;
 
 				if (strstr(line, "power"))  wi.m_Power = (float)atof(value);
@@ -151,6 +196,7 @@ void ReadCharacters(FILE* stream)
 	char line[256], * value;
 	while (fgets(line, 255, stream))
 	{
+		g_ScriptLine++;
 		if (strstr(line, "}")) break;
 		if (strstr(line, "{"))
 		{
@@ -158,6 +204,8 @@ void ReadCharacters(FILE* stream)
 
 			while (fgets(line, 255, stream))
 			{
+				g_ScriptLine++;
+
 				if (strstr(line, "}"))
 				{
 					//AI_to_CIndex[DinoInfo[TotalC].AI] = TotalC;
@@ -167,7 +215,7 @@ void ReadCharacters(FILE* stream)
 
 				value = strstr(line, "=");
 				if (!value)
-					throw std::runtime_error("Script loading error");
+					throw script_error("Was expecting member assignment.", "ReadCharacters()", g_ScriptLine);
 				value++;
 
 				if (strstr(line, "mass")) di.m_Mass = (float)atof(value);
@@ -313,20 +361,26 @@ void ReadPrices(FILE* stream)
 
 	while (fgets(line, 255, stream))
 	{
+		g_ScriptLine++;
 		std::string line_str = line;
 		if (line_str.empty()) { continue; }
 		if (line_str.compare("\n") == 0) { continue; }
 		if (line_str.compare("\r\n") == 0) { continue; }
-
 		if (strstr(line, "}")) { break; }
+
 		value = strstr(line, "=");
-		if (!value) throw std::runtime_error("Script loading error: Expected assignment '='");
+		if (!value) { continue; }
 		value++;
+
+		// TODO: Add in error checking
+		//throw script_error("Was expecting member assignment.", "ReadPrices()", g_ScriptLine);
 
 		if (strstr(line, "start"))  g_StartCredits = (int)atoi(value);
 		if (strstr(line, "area")) {
-			g_AreaInfo.push_back(MakeOldAreaInfo(CurA + 1, (int)atoi(value)));
-			CurA++;
+			g_AreaInfo.push_back(MakeOldAreaInfo(g_AreaInfo.size() + 1, (int)atoi(value)));
+			auto a = g_AreaInfo.end() - 1;
+			if (!a->m_Valid)
+				g_AreaInfo.pop_back();
 		}
 		if (strstr(line, "dino")) {
 			g_DinoInfo[CurD].m_Price = (int)atoi(value);
@@ -352,6 +406,7 @@ void LoadResourcesScript()
 
 	// Initialise some things
 	g_StartCredits = 100; // Default
+	g_ScriptLine = 0;
 
 	file = fopen("huntdat/_res.txt", "r");
 	if (!file) {
@@ -359,16 +414,25 @@ void LoadResourcesScript()
 		return;
 	}
 
-	while (fgets(line, 255, file))
+	try
 	{
-		if (line[0] == '.') break;			//endoffile EOF
-		if (line[0] == '#') continue;	//comment
-		if (line[0] == ';') continue;	//comment
-		//if (strstr(line, "version") ) continue; //TODO: read version
-		if (strstr(line, "weapons")) ReadWeapons(file);
-		if (strstr(line, "characters")) ReadCharacters(file);
-		//if (strstr(line, "areas") ) ReadAreas(file); //TODO: Add areas section to _RES
-		if (strstr(line, "prices")) ReadPrices(file);
+		while (fgets(line, 255, file))
+		{
+			g_ScriptLine++;
+
+			if (line[0] == '.') break;			//endoffile EOF
+			if (line[0] == '#') continue;	//comment
+			if (line[0] == ';') continue;	//comment
+			//if (strstr(line, "version") ) continue; //TODO: read version
+			if (strstr(line, "weapons")) ReadWeapons(file);
+			if (strstr(line, "characters")) ReadCharacters(file);
+			//if (strstr(line, "areas") ) ReadAreas(file); //TODO: Add areas section to _RES
+			if (strstr(line, "prices")) ReadPrices(file);
+		}
+	}
+	catch (script_error& e)
+	{
+		throw std::runtime_error(e.what());
 	}
 
 	fclose(file);
@@ -503,6 +567,13 @@ void TrophyLoad(Profile& profile, int pr)
 
 	// Append any data you want, the original games do not check the file size and stop reading at this point
 
+	//Temporary:
+	int r = profile.Rank;
+	profile.Rank = RANK_BEGINNER;
+	if (profile.Score >= 100) profile.Rank = RANK_ADVANCED;
+	if (profile.Score >= 300) profile.Rank = RANK_MASTER;
+	if (profile.Score >= 10000) profile.Rank = 1000;
+
 	std::cout << "Profile Loaded." << std::endl;
 }
 
@@ -511,6 +582,19 @@ void TrophySave(Profile& profile)
 {
 	std::stringstream fname;
 	fname << "trophy" << std::setfill('0') << std::setw(2) << profile.RegNumber << ".sav";
+
+	int r = profile.Rank;
+	profile.Rank = RANK_BEGINNER;
+	if (profile.Score >= 100) profile.Rank = RANK_ADVANCED;
+	if (profile.Score >= 300) profile.Rank = RANK_MASTER;
+	if (profile.Score >= 10000) profile.Rank = 1000;
+
+	/*
+	// Taken from Carnivores 1
+	if (r != TrophyRoom.Rank) {
+		if (profile.Rank == RANK_ADVANCED) MenuState = 112;
+		if (profile.Rank == RANK_MASTER) MenuState = 113;
+	}*/
 
 	std::ofstream fs(fname.str(), std::ios::binary | std::ios::trunc);
 
