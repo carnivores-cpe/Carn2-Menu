@@ -21,8 +21,7 @@
 
 
 
-#define VERSION_MAJOR 1
-#define VERSION_MINOR 1
+#include "Version.h"
 
 #ifdef _MAIN_
 #	define EXTERNAL
@@ -559,6 +558,7 @@ EXTERNAL SoundFX				g_MenuSound_Move;
 int LaunchProcess(const std::string& exe_name, std::string cmd_line);
 void ShowErrorMessage(const std::string&);
 void PrintLogSeparater();
+void HuntWindowResize();
 
 /*** Menu ***/
 void InitInterface();

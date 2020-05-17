@@ -39,7 +39,12 @@ void CreateLog()
 #else // _iceage
 	std::cout << "Carnivores 2 - Menu\n";
 #endif // !_iceage
-	std::cout << " Version: " << VERSION_MAJOR << "." << VERSION_MINOR << " ";
+
+	std::cout << " Version: " << VERSION_MAJOR << "." << VERSION_MINOR;
+	if (VERSION_REVISION)
+		std::cout << "." << VERSION_REVISION;
+	std::cout << " ";
+
 #ifdef _DEBUG
 	std::cout << "DEBUG ";
 #endif // _DEBUG
@@ -106,6 +111,9 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 	// Close the handles.
 	CloseHandle(processInformation.hProcess);
 	CloseHandle(processInformation.hThread);
+
+	// Resize the window appropriately
+	HuntWindowResize();
 
 	// Reset to the main menu like the original game does
 	ChangeMenuState(MENU_MAIN);
@@ -199,6 +207,18 @@ void ShowErrorMessage(const std::string& error_text)
 }
 
 
+void HuntWindowResize()
+{
+	// Resize the window so the client (drawing) area is 800x600, and reposition it to the center of the primary screen
+	int WX = (GetSystemMetrics(SM_CXSCREEN) / 2) - 400;
+	int WY = (GetSystemMetrics(SM_CYSCREEN) / 2) - 300;
+	RECT rc = { WX, WY, WX + 800, WY + 600 };
+	AdjustWindowRect(&rc, GetWindowLong(hwndMain, GWL_STYLE), false);
+	SetWindowPos(hwndMain, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
+	UpdateWindow(hwndMain);
+}
+
+
 bool CreateMainWindow()
 {
 	WNDCLASSEX wc;
@@ -244,12 +264,7 @@ bool CreateMainWindow()
 	std::cout << "Main Window Creation: Ok!" << std::endl;
 
 	// Resize the window so the client (drawing) area is 800x600, and reposition it to the center of the primary screen
-	int WX = (GetSystemMetrics(SM_CXSCREEN) / 2) - 400;
-	int WY = (GetSystemMetrics(SM_CYSCREEN) / 2) - 300;
-	RECT rc = { WX, WY, WX + 800, WY + 600 };
-	AdjustWindowRect(&rc, GetWindowLong(hwndMain, GWL_STYLE), false);
-	SetWindowPos(hwndMain, HWND_TOP, rc.left, rc.top, rc.right - rc.left, rc.bottom - rc.top, SWP_SHOWWINDOW);
-	UpdateWindow(hwndMain);
+	HuntWindowResize();
 
 	/*
 	FIX: Fixes the window not having a title.
@@ -259,6 +274,9 @@ bool CreateMainWindow()
 #else // !_iceage
 	SetWindowText(hwndMain, "Carnivores 2 - Menu");
 #endif
+
+	// Partialfix: P.Rex requested a method to change the title but this is a compromise
+	SetWindowText(hwndMain, "Carnivores - Menu");
 
 	return true;
 }
