@@ -82,7 +82,6 @@ AreaInfo MakeOldAreaInfo(int index, int price)
 			std::getline(f, line);
 			a.m_Description.push_back(line);
 		}
-		f.close();
 	}
 	else
 	{
