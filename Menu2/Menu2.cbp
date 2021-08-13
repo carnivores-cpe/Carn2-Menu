@@ -34,11 +34,11 @@ I've been using the MinGW W64 GCC Compiler, and thus all my GCC binaries are 64-
 				<Option working_dir="../$(TARGET_NAME)/" />
 				<Option object_output="$(TARGET_NAME)/" />
 				<Option type="1" />
-				<Option compiler="w64_gnu_gcc_compiler" />
+				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-Wall" />
-					<Add option="-g" />
 					<Add option="-std=c++17" />
+					<Add option="-g" />
 					<Add option="-D_DEBUG" />
 				</Compiler>
 			</Target>

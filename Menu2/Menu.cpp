@@ -84,10 +84,10 @@ const char st_UnitText[2][10] = { "Metric", "Imperial" };
 const char st_HMLText[4][8] = { "Low", "Medium", "High", "Ultra" };
 const char st_TextureText[3][5] = { "Low", "High", "Auto" };
 const char st_AlphaKeyText[2][14] = { "Color Key", "Alpha Channel" };
-const char st_RenText[4][11] = { "Software", "3Dfx Glide", "Direct3D 7", "OpenGL" };
-const char st_AudText[5][16] = { "Software", "Direct Sound 3D", "Aureal 3D", "EAX", "OpenAL" };
-
-const char g_RendererFile[4][7] = { "v_soft", "v_3dfx", "v_d3d", "v_gl" };
+const char st_RenText[7][12] = { "Software", "3Dfx Glide", "Direct3D 7", "OpenGL", "Direct3D 9", "Direct3D 11", "Vulkan" };
+const char g_RendererFile[7][8] = { "v_soft", "v_3dfx", "v_d3d", "v_gl", "v_d3d9", "v_d3d11", "v_vulk" };
+const char st_AudText[6][16] = { "Software", "Direct Sound 3D", "Aureal 3D", "EAX", "OpenAL", "XAudio2"};
+const char g_AudioFile[6][8] = { "a_soft", "a_ds3d", "a_a3d", "a_eax", "a_oal", "a_xa2" };
 
 
 int MapVKKey(int k);
@@ -266,14 +266,22 @@ void AudioSoftThread()
 			std::cout << "Channels: " << woc.wChannels << std::endl;
 
 			std::cout << "Supported formats:" << std::endl;
-			if (woc.dwFormats & WAVE_FORMAT_2M08)
+			if (woc.dwFormats & WAVE_FORMAT_1M08)
 				std::cout << "\t22.05 kHz Mono 8-bit" << std::endl;
 			if (woc.dwFormats & WAVE_FORMAT_2M16)
 				std::cout << "\t22.05 kHz Mono 16-bit" << std::endl;
-			if (woc.dwFormats & WAVE_FORMAT_2M08)
+			if (woc.dwFormats & WAVE_FORMAT_2S08)
 				std::cout << "\t22.05 kHz Stereo 8-bit" << std::endl;
-			if (woc.dwFormats & WAVE_FORMAT_2M16)
+			if (woc.dwFormats & WAVE_FORMAT_2S16)
 				std::cout << "\t22.05 kHz Stereo 16-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_4M08)
+				std::cout << "\t44.1 kHz Mono 8-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_4M16)
+				std::cout << "\t44.1 kHz Mono 16-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_4S08)
+				std::cout << "\t44.1 kHz Stereo 8-bit" << std::endl;
+			if (woc.dwFormats & WAVE_FORMAT_4S16)
+				std::cout << "\t44.1 kHz Stereo 16-bit" << std::endl;
 
 			std::cout << "Supported functionality:" << std::endl;
 			if (woc.dwSupport & WAVECAPS_LRVOLUME)
@@ -483,8 +491,8 @@ void InitInterface()
 	MenuHunt[m].Count = 0;
 	MenuHunt[m].Offset = 0;
 	MenuHunt[m].AddItem("Camouflage");
-	MenuHunt[m].AddItem("Cover scent");
 	MenuHunt[m].AddItem("Radar");
+	MenuHunt[m].AddItem("Cover scent");
 	MenuHunt[m].AddItem("Double ammo");
 #ifdef _iceage
 	MenuHunt[m].AddItem("Supply drop");
@@ -494,11 +502,8 @@ void InitInterface()
 	std::cout << "Interface: Initialisation Ok!" << std::endl;
 
 #ifdef _DEBUG
-	/*if (true)
-	{
-		std::thread audio_thread(AudioSoftThread);
-		audio_thread.join();
-		}*/
+	std::thread audio_thread(AudioSoftThread);
+	audio_thread.join();
 #endif // _DEBUG
 }
 
@@ -829,7 +834,7 @@ void MenuEventStart(int32_t menu_state)
 		Hunt License Menu */
 	case MENU_HUNT:
 	{
-		g_HuntInfo.first = 0;
+		g_HuntInfo.first = -1;
 		g_HuntInfo.second = 0;
 
 		for (auto i = 1U; i <= 3U; i++)
@@ -1177,32 +1182,33 @@ void DrawMenuHunt()
 	uint32_t c = RGB(239, 228, 176);
 	std::stringstream ss;
 
-	if (g_HuntSelectPic != nullptr)
+	if (g_HuntSelectPic != nullptr && g_HuntSelectPic->IsValid())
 	{
 		DrawPicture(38, 73, *g_HuntSelectPic);
 	}
 
 	InterfaceSetFont(fnt_Big);
 
+	// Draw the profile credits within range of 0 - 9999
 	ss << (min(9999, max(0, g_UserProfile.Score)));
 	DrawTextShadow(328 + 8, 38, ss.str(), c, DTA_LEFT);
 	ss.str(""); ss.clear();
 
+	// Draw the debited credits for the current hunt options, in range of -999 - 9999
 	ss << (min(9999, max(-999, (g_UserProfile.Score - g_ScoreDebit))));
 	DrawTextShadow(472 - 8, 38, ss.str(), c, DTA_RIGHT);
 	ss.str(""); ss.clear();
 
 	InterfaceSetFont(fnt_Midd);
 
-
-	if (g_HuntInfo.first == 0) // Areas
+	if (g_HuntInfo.first == 0 && !g_AreaInfo.empty()) // Areas
 	{
 		for (auto i = 1U; i < g_AreaInfo[g_HuntInfo.second].m_Description.size(); i++)
 		{
 			DrawTextShadow(424, 96 + ((i-1) * 16), g_AreaInfo[g_HuntInfo.second].m_Description[i], c);
 		}
 	}
-	else if (g_HuntInfo.first == 1) // Dinosaurs
+	else if (g_HuntInfo.first == 1 && !g_DinoInfo.empty()) // Dinosaurs
 	{
 		unsigned d = g_DinoList[g_HuntInfo.second];
 		if (!(g_DinoInfo[d].m_Price >= 1000 && g_UserProfile.Score < 1000))
@@ -1221,7 +1227,7 @@ void DrawMenuHunt()
 			DrawProgressBar(424 + 80, 210 + (2 * 16), min(1.0f, max(0.0f, g_DinoInfo[d].m_SmellK)) * 2.f);
 		}
 	}
-	else if (g_HuntInfo.first == 2) // Weapons
+	else if (g_HuntInfo.first == 2 && !g_WeapInfo.empty()) // Weapons
 	{
 		for (auto i = 0U; i < g_WeapInfo[g_HuntInfo.second].m_Description.size(); i++)
 		{
@@ -1236,11 +1242,26 @@ void DrawMenuHunt()
 		DrawProgressBar(424 + 80, 210 + (1 * 16), min(2.0f, max(0.0f, g_WeapInfo[g_HuntInfo.second].m_Prec)));
 		DrawProgressBar(424 + 80, 210 + (2 * 16), min(2.0f, max(0.0f, g_WeapInfo[g_HuntInfo.second].m_Loud)));
 	}
-	else if (g_HuntInfo.first == 3) // Accessories
+	else if (g_HuntInfo.first == 3 && !g_UtilInfo.empty()) // Accessories
 	{
-		for (auto i = 0U; i < g_UtilInfo[g_HuntInfo.second].m_Description.size(); i++)
-		{
-			DrawTextShadow(424, 96 + ((i) * 16), g_UtilInfo[g_HuntInfo.second].m_Description[i], c);
+		if (g_HuntInfo.second < 9000) {
+			for (auto i = 0U; i < g_UtilInfo[g_HuntInfo.second].m_Description.size(); i++)
+			{
+				DrawTextShadow(424, 96 + ((i) * 16), g_UtilInfo[g_HuntInfo.second].m_Description[i], c);
+			}
+		}
+		else {
+			// TODO: Don't hardcode this...
+			if (g_HuntInfo.second == 9998)
+				for (auto i = 0U; i < g_TranqInfo.m_Description.size(); i++)
+				{
+					DrawTextShadow(424, 96 + ((i) * 16), g_TranqInfo.m_Description[i], c);
+				}
+			else if (g_HuntInfo.second == 9999)
+				for (auto i = 0U; i < g_ObserverInfo.m_Description.size(); i++)
+				{
+					DrawTextShadow(424, 96 + ((i) * 16), g_ObserverInfo.m_Description[i], c);
+				}
 		}
 	}
 
@@ -1338,7 +1359,8 @@ void DrawMenuHunt()
 			c = RGB(255, 255, 10);
 		}
 
-		DrawTextShadow(MenuHunt[3].Rect.left + 4, MenuHunt[3].Rect.top + (16 * i), MenuHunt[3].Item[ii].first, c);
+		//DrawTextShadow(MenuHunt[3].Rect.left + 4, MenuHunt[3].Rect.top + (16 * i), MenuHunt[3].Item[ii].first, c);
+		DrawTextShadow(MenuHunt[3].Rect.left + 4, MenuHunt[3].Rect.top + (16 * i), g_UtilInfo[ii].m_Name, c);
 	}
 }
 
@@ -1827,6 +1849,19 @@ void MenuEventInput(int32_t menu)
 				}
 			}
 		}
+		else if (id == 5) {
+			// TODO: Finish this for GitHub issue #16
+			g_HuntSelectPic = &g_TranqInfo.m_Thumbnail;
+			g_HuntInfo.first = 3; // Accessories
+			g_HuntInfo.second = 9998;
+
+		}
+		else if (id == 6) {
+			// TODO: Finish this for GitHub issue #16
+			g_HuntSelectPic = &g_ObserverInfo.m_Thumbnail;
+			g_HuntInfo.first = 3; // Accessories
+			g_HuntInfo.second = 9999;
+		}
 
 		// Left Mouse Click
 		if (g_KeyboardState[VK_LBUTTON] & 128)
@@ -1850,10 +1885,12 @@ void MenuEventInput(int32_t menu)
 
 				if (id == 4)
 					b = false; // Unused
-				if (id == 5)
+				if (id == 5) {
 					g_Options.TranqMode = b;
-				if (id == 6)
+				}
+				if (id == 6) {
 					g_ObserverMode = b;
+				}
 			}
 			else if (id == 7) // Back
 			{
@@ -1866,6 +1903,7 @@ void MenuEventInput(int32_t menu)
 				// Launch the game
 				WaitForMouseRelease();
 				//PlaySound("huntdat/soundfx/menugo.wav", NULL, SND_ASYNC | SND_FILENAME);
+				
 				if (MenuHunt[0].Selected == -1)
 				{
 					// -- Don't launch
@@ -1875,20 +1913,22 @@ void MenuEventInput(int32_t menu)
 				int din = 0;
 				int wep = 0;
 
+				// Calculate the dinosaur flags
 				for (unsigned i = 0; i < g_DinoList.size(); i++)
 				{
 					if (MenuHunt[1].Item[i].second)
 						din |= 1 << i;
 				}
 
+				// Calculate the weapon flags
 				for (unsigned i = 0; i < g_WeapInfo.size(); i++)
 				{
 					if (MenuHunt[2].Item[i].second)
 						wep |= 1 << i;
 				}
 
+				// Initialise the command line parameters
 				std::stringstream params("");
-
 				params << "reg=" << g_UserProfile.RegNumber;
 				params << " prj=huntdat/areas/" << g_AreaInfo[MenuHunt[0].Selected].m_ProjectName;
 				params << " din=" << din;
@@ -1896,21 +1936,49 @@ void MenuEventInput(int32_t menu)
 				params << " dtm=" << g_TimeOfDay;
 
 #ifdef _iceage
+				// Ice Age resupply
 				if (MenuHunt[3].Item[4].second)
 					params << " " << g_UtilInfo[4].m_Command;
 #endif //_iceage
+
 				if (MenuHunt[3].Item[3].second)
 					params << " " << g_UtilInfo[3].m_Command;
-				if (g_Options.RadarMode)
+
+				if (MenuHunt[3].Item[0].second) {
+					g_Options.CamoMode = true;
+					params << " -camo";
+				}
+				else {
+					g_Options.CamoMode = true;
+				}
+
+				if (MenuHunt[3].Item[1].second) {
+					g_Options.RadarMode = true;
 					params << " -radar";
+				}
+				else {
+					g_Options.RadarMode = true;
+				}
+
+				if (MenuHunt[3].Item[2].second) {
+					g_Options.ScentMode = true;
+					params << " -scent";
+				}
+				else {
+					g_Options.ScentMode = true;
+				}
+
 				if (g_Options.TranqMode)
 					params << " -tranq";
+
 				if (g_ObserverMode)
 					params << " -observ";
 
 #ifdef _DEBUG
 				params << " -debug";
+				params << " -window"; // Optional
 #endif //_DEBUG
+
 				std::stringstream renderer("");
 				renderer << g_RendererFile[g_Options.RenderAPI] << ".ren";
 

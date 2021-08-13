@@ -375,23 +375,24 @@ void ReadPrices(FILE* stream)
 		// TODO: Add in error checking
 		//throw script_error("Was expecting member assignment.", "ReadPrices()", g_ScriptLine);
 
-		if (strstr(line, "start"))  g_StartCredits = (int)atoi(value);
-		if (strstr(line, "area")) {
+		if (strstr(line, "start")) {
+                g_StartCredits = (int)atoi(value);
+		}
+		else if (strstr(line, "area")) {
 			g_AreaInfo.push_back(MakeOldAreaInfo(g_AreaInfo.size() + 1, (int)atoi(value)));
 			auto a = g_AreaInfo.end() - 1;
 			if (!a->m_Valid)
 				g_AreaInfo.pop_back();
 		}
-		if (strstr(line, "dino")) {
+		else if (strstr(line, "dino")) {
 			g_DinoInfo[CurD].m_Price = (int)atoi(value);
 			CurD++;
 		}
-		if (strstr(line, "weapon")) {
+		else if (strstr(line, "weapon")) {
 			g_WeapInfo[CurW].m_Price = (int)atoi(value);
 			CurW++;
 		}
-
-		if (strstr(line, "acces")) {
+		else if (strstr(line, "acces")) {
 			dummy = atoi(value);// We don't use this right now
 			CurU++;
 		}
@@ -446,11 +447,11 @@ void LoadResources()
 	// TODO: enable these and use them instead of GDI drawing for the trackbars
 	//LoadPicture(g_TrackBar[0], "huntdat/menu/sl_bar.tga");
 	//LoadPicture(g_TrackBar[1], "huntdat/menu/sl_but.tga");
-	
+
 	UtilInfo ui;
 	ui.m_Name = "Camouflage";
 	LoadText(ui.m_Description, "huntdat/menu/txt/camoflag.nfo");
-	ui.m_Command = "";
+	ui.m_Command = "-camo";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip1.tga");
 	g_UtilInfo.push_back(ui);
 	ui.m_Description.clear();
@@ -471,7 +472,7 @@ void LoadResources()
 
 	ui.m_Name = "Double ammo";
 	LoadText(ui.m_Description, "huntdat/menu/txt/double.nfo");
-	ui.m_Command = "";
+	ui.m_Command = "-double";
 	LoadPicture(ui.m_Thumbnail, "huntdat/menu/pics/equip4.tga");
 	g_UtilInfo.push_back(ui);
 	ui.m_Description.clear();
@@ -484,6 +485,16 @@ void LoadResources()
 	g_UtilInfo.push_back(ui);
 	ui.m_Description.clear();
 #endif //_iceage
+
+	// TODO: Add observer and tranquiliser information to resolve GitHub issue #16
+	g_TranqInfo.m_Name = "Tranquilizer";
+	LoadText(g_TranqInfo.m_Description, "huntdat/menu/txt/tranq.nfo");
+	g_TranqInfo.m_Command = "-tranq -tranquilizer";
+
+	g_ObserverInfo.m_Name = "Observer";
+	LoadText(g_ObserverInfo.m_Description, "huntdat/menu/txt/observe.nfo");
+	g_ObserverInfo.m_Command = "-observe -observer";
+
 
 	LoadWave(g_MenuSound_Go, "huntdat/soundfx/menugo.wav");
 	LoadWave(g_MenuSound_Ambient, "huntdat/soundfx/menuamb.wav");
@@ -675,7 +686,7 @@ bool ReadTGAFile(const std::string& path, TargaImage& tga)
 bool LoadPicture(Picture& pic, const std::string& fpath)
 {
 	TargaImage tga;
-	
+
 	if (ReadTGAFile(fpath, tga))
 	{
 
@@ -739,7 +750,7 @@ bool LoadWave(SoundFX& sfx, const std::string& path)
 				else tf.seekg(-3, std::ios::cur);
 			}
 		}
-		
+
 		tf.read((char*)&sfx.m_Length, 4);
 
 		if (sfx.m_Data)
@@ -898,4 +909,9 @@ Picture& Picture::operator= (const Picture& rhs)
 	m_Height = rhs.m_Height;
 
 	return *this;
+}
+
+bool Picture::IsValid() const
+{
+	return (m_Width > 0 && m_Height > 0 && m_Data);
 }

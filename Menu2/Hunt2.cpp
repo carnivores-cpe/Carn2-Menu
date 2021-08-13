@@ -81,6 +81,7 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 	uint32_t exitCode = 0;
 
 	ShowWindow(hwndMain, SW_MINIMIZE);
+	EnableWindow(hwndMain, false);
 
 	// Create the process
 	BOOL result = CreateProcess(exe_name.c_str(), const_cast<char*>(cmd_line.c_str()),
@@ -97,6 +98,7 @@ int LaunchProcess(const std::string& exe_name, std::string cmd_line)
 	// Successfully created the process.  Wait for it to finish.
 	WaitForSingleObject(processInformation.hProcess, INFINITE);
 
+	EnableWindow(hwndMain, true);
 	ShowWindow(hwndMain, SW_RESTORE);
 
 	// Get the exit code.

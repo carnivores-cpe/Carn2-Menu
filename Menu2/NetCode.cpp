@@ -5,6 +5,22 @@
 * Main Network Code
 *
 */
+#if !NETWORKCODE_DISABLED
+
+#include <iostream>
+
+void InitNetwork()
+{
+	std::cout << "Network: Dummy Init Ok!" << std::endl;
+}
+
+
+void ShutdownNetwork()
+{
+	std::cout << "Network: Dummy Shutdown Ok!" << std::endl;
+}
+
+#else 
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x701
@@ -233,3 +249,5 @@ void NetworkConnect(LPSTR ip)
 		return;
 	}
 }
+
+#endif

@@ -236,6 +236,8 @@ public:
 
 	Picture& operator= (const Picture& rhs);
 
+	bool IsValid() const;
+
 	// TODO: Add Getters and Setters, move member variables to private
 };
 
@@ -587,6 +589,7 @@ EXTERNAL std::vector<DinoInfo>	g_DinoInfo;
 EXTERNAL std::vector<WeapInfo>	g_WeapInfo;
 EXTERNAL std::vector<AreaInfo>	g_AreaInfo;
 EXTERNAL std::vector<UtilInfo>	g_UtilInfo;
+EXTERNAL UtilInfo				g_TranqInfo, g_ObserverInfo;
 EXTERNAL std::vector<unsigned int> g_DinoList;
 EXTERNAL uint32_t				g_ProfileIndex;
 EXTERNAL uint32_t				g_HiliteProfileIndex;
